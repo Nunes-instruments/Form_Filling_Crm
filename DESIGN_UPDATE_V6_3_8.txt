@@ -1,0 +1,17 @@
+NUNES Operations Workspace V6.3.8 - Executive UI Upgrade
+
+VISUAL-ONLY UPDATE
+- Larger readable typography across the company workspace.
+- Larger buttons, inputs, navigation, tables and status labels.
+- Premium management dashboard card hierarchy.
+- Larger professional charts and improved chart labels/tooltips.
+- Thicker Purchasing pipeline and Servicing status bars.
+- Improved spacing and responsive readability.
+- Web UI readability improvements in Purchasing and Servicing forms.
+
+UNCHANGED
+- Purchasing workflow and business logic.
+- Servicing workflow and business logic.
+- Gemini Vision extraction pipeline and configured default.
+- Saved data/report behavior.
+- PDF/paper print layouts.

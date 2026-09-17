@@ -1,0 +1,21 @@
+"use client";
+import { useEffect,useMemo,useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Gauge, Search, Users, FileText, Wrench, ClipboardList } from "lucide-react";
+import { clearDataCache,companyFetch,getProcessStatus,getRevision, money, dateText } from "@/lib/data";
+import type { ProcessPayload } from "@/lib/types";
+import ReportModal from "./ReportModal";
+
+export default function StatusClient(){
+ const searchParams=useSearchParams();const initial=searchParams.get("type")==="servicing"?"servicing":"purchasing";
+ const [tab,setTab]=useState<"purchasing"|"servicing">(initial);const [q,setQ]=useState("");const [d,setD]=useState<ProcessPayload|null>(null);const [detail,setDetail]=useState<any>(null);
+ const load=(force=false)=>{if(force)clearDataCache("process-status");return getProcessStatus().then(setD)};useEffect(()=>{let stopped=false;let revision="";load();const watch=async()=>{try{const r=await getRevision();if(stopped)return;if(!revision){revision=r.revision;return}if(r.revision!==revision){revision=r.revision;await load(true)}}catch{}};watch();const t=setInterval(watch,6000);const focus=()=>load(true);window.addEventListener("focus",focus);return()=>{stopped=true;clearInterval(t);window.removeEventListener("focus",focus)}},[]);
+ const rows=useMemo(()=>{const a=(tab==="purchasing"?d?.purchasing:d?.servicing)||[];const s=q.toLowerCase().trim();if(!s)return a;return a.filter((r:any)=>JSON.stringify(r).toLowerCase().includes(s))},[d,tab,q]);
+ const open=async(id:any)=>{const r=await companyFetch(`/api/data/reports/${tab}/${encodeURIComponent(id)}`,{cache:"no-store"});setDetail(await r.json())};
+ return <main className="page"><div className="page-head"><div><div className="eyebrow">Process status</div><h1>Know exactly where the work is</h1><p>See the current stage, completion percentage, last update and people already recorded on each Purchasing or Servicing process.</p></div></div>
+  <div className="filters"><div className="tabs"><button className={tab==="purchasing"?"active":""} onClick={()=>setTab("purchasing")}>Purchasing</button><button className={tab==="servicing"?"active":""} onClick={()=>setTab("servicing")}>Servicing</button></div><div style={{position:"relative",flex:1}}><input className="search" style={{width:"100%"}} placeholder="Search order, job, customer, staff, status…" value={q} onChange={e=>setQ(e.target.value)}/></div></div>
+  <section className="section"><div className="section-head"><div className="section-title"><div className={`section-icon ${tab==="servicing"?"teal":""}`}>{tab==="purchasing"?<ClipboardList/>:<Wrench/>}</div><div><h2>{tab==="purchasing"?"Purchasing process queue":"Servicing process queue"}</h2><p>{rows.length} process records currently visible.</p></div></div></div><div className="section-body">
+   <div className="table-wrap"><table className="table"><thead><tr><th>{tab==="purchasing"?"Order":"Job"}</th><th>Customer</th><th>Current stage</th><th>Progress</th><th>Status</th><th>People involved</th><th>Latest person</th><th>Last update</th><th></th></tr></thead><tbody>{rows.map((r:any)=><tr key={r.id}><td><b>{tab==="purchasing"?r.order_id:r.job_no}</b><span className="sub">{r.branch}</span></td><td>{r.customer}{tab==="servicing"&&<span className="sub">{r.product}</span>}</td><td><span className="status-chip">{r.current_stage||r.status}</span></td><td><div className="status-progress"><div className="progress-track"><div className={`progress-fill ${tab==="servicing"?"teal":""}`} style={{width:`${r.progress||0}%`}}/></div><b>{r.progress||0}%</b></div></td><td>{r.status}</td><td><div className="people">{(r.staff||[]).slice(0,3).map((x:string,i:number)=><span className="person" key={i}><Users/>{x}</span>)}</div></td><td>{r.latest_person||"Not recorded"}</td><td>{dateText(r.updated_at)}</td><td><div className="row-actions"><button className="mini-btn" onClick={()=>open(r.id)}>Report</button><Link className="mini-btn" href={`/forms/${tab}`}>Form</Link></div></td></tr>)}</tbody></table>{!rows.length&&<div className="empty">No process records found.</div>}</div>
+  </div></section>{detail&&<ReportModal data={detail} onClose={()=>setDetail(null)}/>}</main>
+}

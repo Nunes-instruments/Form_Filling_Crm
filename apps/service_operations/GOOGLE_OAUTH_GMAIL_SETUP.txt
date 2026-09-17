@@ -1,0 +1,30 @@
+SERVICEFLOW V1.1.30 - GOOGLE GMAIL OAUTH SETUP
+
+SMTP and Gmail App Passwords are no longer used.
+
+ONE-TIME GOOGLE CLOUD SETUP
+1. Open Google Cloud Console with the Google account/project you want to use.
+2. Enable Gmail API for that project.
+3. Configure Google Auth Platform / OAuth consent screen.
+   - If the app is in Testing, add the Gmail account that will send mail as a Test user.
+4. Create OAuth Client ID.
+   - Application type: Desktop app
+   - Name: ServiceFlow Gmail
+5. Download the OAuth client JSON file.
+
+CONNECT IN SERVICEFLOW
+1. Run START_SERVICE_JOB_APP.bat on the server PC.
+2. Open Settings -> Google Gmail Connection.
+3. Click Upload Google OAuth Client JSON and select the downloaded JSON.
+4. Click Sign in with Google.
+5. Choose the Gmail account that should send customer mail and approve the gmail.send permission.
+6. ServiceFlow returns to Settings and shows the connected Gmail address.
+
+The local OAuth callback is:
+http://127.0.0.1:5055
+
+IMPORTANT
+- Perform Google sign-in on the ServiceFlow server PC because the OAuth callback uses 127.0.0.1.
+- The OAuth client secret and refresh token are stored only in the local data/settings.json file.
+- Keep the ServiceFlow data folder private and include it in normal backups.
+- WhatsApp remains independent and continues to use the WPPConnect sidecar.

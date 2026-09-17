@@ -1,0 +1,14 @@
+NUNES Operations Workspace V6.3.1
+
+Speed and live-output reliability update only.
+
+- Dashboard watches Purchasing/Servicing data revision every ~1.2 seconds.
+- Saving a form invalidates dashboard/process caches automatically.
+- Dashboard refreshes immediately when the browser regains focus.
+- Owner dashboard no longer waits for form-engine health probes.
+- Team activity loads after core dashboard data so first paint is faster.
+- Process Status watches the same data revision for near-live updates.
+- Purchasing and Servicing health endpoints now identify the exact extracted package instance.
+- Stale form engines from an older ZIP are stopped/replaced before current engines start.
+- Prevents the major failure mode where a form saves into an old extracted folder while the new dashboard reads another folder.
+- Purchasing/Servicing workflows and UI/business rules are otherwise unchanged.

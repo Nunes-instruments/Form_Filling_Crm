@@ -1,0 +1,13 @@
+SERVICE FORM JSON HOTFIX
+
+Fixes only the current Servicing/Connections opening problem:
+- Repairs malformed/empty ServiceData JSON safely.
+- Retries a temporarily incomplete JSON read instead of showing "Unexpected end of JSON input".
+- Searches the main-server migration backups before using a clean fallback.
+- Keeps a damaged non-empty JSON copy as *.corrupt-*.bak before recovery.
+- Forces Forms > Servicing to open /jobs/new instead of a stale saved /settings or / URL.
+- Google Gmail and WhatsApp connection pages keep returning structured errors instead of an empty JSON response.
+- NUNES dashboard remains on port 8785. NUNES does not bind to port 8765.
+
+On the current main-server PC run:
+C_REPAIR_SERVICE_FORM_NOW.bat

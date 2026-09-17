@@ -1,0 +1,27 @@
+NUNES OPERATIONS WORKSPACE V6.2 - SPEED UPDATE
+================================================
+
+Scope of this release: loading speed only.
+
+No Purchasing workflow logic changed.
+No Servicing workflow/business logic changed.
+No dashboard layout, reports, form fields, status rules, or process rules changed.
+
+Performance improvements:
+- Process Status removes per-order audit database queries and reads latest worker data in one query.
+- Tasks/Work Queue removes per-order audit database queries.
+- Company data APIs use short-lived, source-aware memory caching and automatically invalidate when Purchasing/Servicing saved data changes.
+- Servicing jobs JSON is parsed once per file version instead of repeatedly for every dashboard/API request.
+- Module health checks run in parallel with a short cache.
+- Browser data requests are de-duplicated and cached briefly during navigation.
+- Process Detail loads the actual report first; runtime/module status no longer blocks the page.
+- Forms module startup polling uses the lightweight module-status API instead of rebuilding the full dashboard overview repeatedly.
+- Windows starts Purchasing and Servicing warm-up in the background after the main platform is ready, so later Form clicks open much faster.
+- Servicing WhatsApp runtime starts in the background and no longer blocks the Service web page from starting.
+
+Validation with a temporary 300-record Purchasing + 300-record Servicing dataset:
+- Process Status cold API build: ~19.9 ms -> ~4.5 ms
+- Process Status warm API build: ~20.4 ms -> ~0.06 ms
+- Tasks cold API build: ~27.8 ms -> ~4.5 ms
+- Tasks warm API build: ~29.3 ms -> ~0.05 ms
+Temporary validation records were removed before packaging.

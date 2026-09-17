@@ -1,0 +1,9 @@
+# Full developer requirements. START_SERVER.bat installs only core_requirements.txt
+# for fast startup. Google packages are installed automatically only when Google
+# Drive/Sheets sync is enabled and first used.
+Flask==3.1.2
+Werkzeug==3.1.3
+openpyxl==3.1.5
+reportlab==4.4.3
+google-api-python-client==2.179.0
+google-auth==2.40.3

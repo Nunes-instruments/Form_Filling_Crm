@@ -1,0 +1,16 @@
+NUNES V6.5.2 - WINDOWS PATH ARGUMENT FIX
+
+Fixed the first-time/main-server setup error:
+  Resolve-Path : Illegal characters in path.
+
+Cause:
+A quoted BAT argument ending with %~dp0\ could absorb the following -Quiet switch on some Windows command-line parsing paths.
+
+Fix:
+- All direct PowerShell -Root calls now pass %~dp0. (no trailing-backslash quote ambiguity).
+- install-local-google-secret.ps1 also defensively cleans the legacy malformed value.
+- Existing business data, forms, Gmail/WhatsApp workflow, ports and staff logic were not changed by this fix.
+
+Run on the MAIN SERVER PC:
+  0_FIRST_TIME_VSCODE_MAIN_SERVER.bat
+

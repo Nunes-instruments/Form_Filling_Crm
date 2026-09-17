@@ -1,0 +1,31 @@
+NUNES COMPANY PLATFORM V6.4.8 - OTHER DEVICE FIX
+=================================================
+
+CAUSE OF THE PROBLEM
+The V6.4.7 bridge used 127.0.0.1. On another device, 127.0.0.1 means
+that other device, not the NUNES server PC. Therefore only the server PC
+could read the Purchasing and Servicing records.
+
+ONE-TIME SERVER SETUP
+1. Keep this extracted folder in a permanent location on the server PC.
+2. Double-click SETUP_THIS_PC_AS_SERVER.bat.
+3. Choose Yes at the Windows Administrator prompt.
+4. Open OPEN_ON_OTHER_DEVICES.txt and share the Other devices link.
+
+OTHER DEVICES
+- Connect to the same office Wi-Fi or wired network.
+- Open the exact Other devices URL from OPEN_ON_OTHER_DEVICES.txt.
+- Do not use 127.0.0.1 or localhost on another device.
+
+AUTOMATIC START
+The server starts automatically after the configured Windows user signs in.
+Keep the server PC powered on and do not move or rename this folder afterward.
+
+VERCEL
+The Vercel address is public, but your SQLite/JSON data remains on this PC.
+Internet-wide live data requires a stable public HTTPS backend/domain. The
+office-network URL supplied by this package is the reliable no-cloud method.
+
+DATA SAFETY
+This update does not replace Purchasing SQLite, Servicing jobs, settings,
+uploads, or existing business records.

@@ -1,0 +1,20 @@
+NUNES Operations V6.5.0 - Dashboard Standalone Start Fix
+=========================================================
+
+Fixes the remaining Step [5/6] dashboard startup failure.
+
+Cause:
+- platform_web/next.config.mjs uses output: 'standalone'.
+- Earlier V6.5.0 packages built the standalone output correctly but then tried
+  to run it with `next start`.
+- The correct self-hosted runtime for this build is .next/standalone/server.js.
+
+Changes:
+- RUN_PLATFORM.bat starts the generated standalone server with node.exe.
+- PORT and HOSTNAME are supplied explicitly.
+- .next/static is junctioned into the standalone runtime so JS/CSS chunks load.
+- Cached builds are valid only when standalone/server.js exists.
+- Step [5/6] waits up to 20 seconds for health.
+- A Step [5/6] failure now GOTOes a dedicated error handler, prints the runtime
+  log, and exits non-zero. It can never fall through to a false READY message.
+- Existing Purchasing and Servicing data are not reset or deleted.

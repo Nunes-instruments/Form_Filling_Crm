@@ -1,0 +1,8 @@
+NUNES Operations V6.5.0 - Server Setup Path Fix
+
+Fixed:
+- Administrator server setup no longer passes a quoted folder path ending in a backslash.
+- configure-office-server.ps1 now sanitizes and resolves the application folder safely instead of calling GetFullPath() on a malformed command-line value.
+- CONFIGURE_GEMINI.bat uses the same safe canonical root-path handoff.
+
+This patch does not delete, reset, or migrate Purchasing or Servicing data.

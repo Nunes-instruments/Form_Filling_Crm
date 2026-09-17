@@ -1,0 +1,18 @@
+V24 - Faster, visible owner setup
+
+If the current window title starts with Select, press Esc once to leave selection.
+Extract V24 and run 1_SETUP_ALWAYS_ON_SERVER.bat as Administrator.
+
+Application source signature is unchanged from V23: no new Servicing build is
+required when that exact V23 runtime is already fully prepared.
+Exact-source completed runtimes skip Node bootstrap, mirroring, install and build.
+New builds reuse the existing Node executable and shared dependency cache.
+Build-only setup no longer starts a temporary server, waits for it, warms forms,
+or launches browser/URL/cache background tasks before the real resident starts.
+Build output is shown in setup. Hidden errors no longer wait on an invisible pause.
+QuickEdit selection is disabled during Servicing setup where Windows supports it.
+
+First installation or a changed application still needs a production build.
+This ZIP changes setup scripts only; Gmail, WhatsApp, forms and saved data remain.
+Private OAuth client JSON is included. Keep this ZIP within your company.
+Windows execution and real setup speed must be verified on your owner PC.

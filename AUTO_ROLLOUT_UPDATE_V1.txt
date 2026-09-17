@@ -1,0 +1,9 @@
+AUTO ROLLOUT UPDATE V1
+- Main server is now the single application-code source for staff and owner client PCs.
+- Added E_UPDATE_MAIN_SERVER_AUTO_ROLLOUT.bat for one-click future updates on the main server only.
+- Each update creates a new server rollout ID.
+- Already-open dashboards check /api/health and reload automatically when that rollout ID changes.
+- Staff/owner PCs do not need future ZIP copies after the one-time shared-server connection.
+- Persistent company data is backed up before an update.
+- Existing Gmail/WhatsApp/purchasing/servicing workflows were not intentionally changed.
+- NUNES continues to use dashboard port 8785; port 8765 is left for the user's other project.

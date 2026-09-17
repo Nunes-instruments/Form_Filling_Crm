@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% block content %}
+<div class="page-head"><div><h1>Task Board</h1><p>One shared record across Marketing, Dispatch, Payments, Supplier, Accounts and Approval.</p></div><div class="actions"><form method="get" class="branch-select-form"><label>Selected Branch<select name="branch" onchange="this.form.submit()"><option value="" {% if not branch %}selected{% endif %}>All Branches</option>{% for b in branches %}<option value="{{b.key}}" {% if branch==b.key %}selected{% endif %}>{{b.name}}</option>{% endfor %}</select></label></form><a class="btn primary" href="{{ url_for('new_order',branch=branch) }}">+ New Order</a></div></div>
+{% if branch %}<div class="selected-branch-note">Showing only <strong>{{branch_by_key[branch].name}}</strong>. Change the Selected Branch button to switch branch, or choose All Branches.</div>{% endif %}
+<div class="cards">
+  {% for s in ['Draft','In Progress','Waiting for Dispatch','Waiting for Payment','Waiting for Supplier','Waiting for Accounts','Waiting for Approval','Completed'] %}
+  <a class="metric" href="{{ url_for('orders',status=s,branch=branch) }}"><span>{{ s }}</span><strong>{{ counts.get(s,0) }}</strong></a>
+  {% endfor %}
+  <div class="metric warn"><span>Payment Outstanding</span><strong>{{outstanding}}</strong></div>
+</div>
+<section class="panel">
+  <div class="panel-title"><h2>Recently Updated{% if branch %} · {{branch_by_key[branch].location}}{% endif %}</h2><a href="{{url_for('orders',branch=branch)}}">View all</a></div>
+  <table class="data"><thead><tr><th>Order ID</th><th>Branch</th><th>Customer</th><th>MKT Person</th><th>Status</th><th>Order Value</th><th>Updated</th></tr></thead>
+  <tbody>{% for o in latest %}<tr>
+    <td><a href="{{url_for('order_form',oid=o.id)}}">{{o.order_name or ('Order #'+o.id|string)}}</a></td><td>{{branch_by_key.get(o.branch, branch_by_key['MAIN']).name}}</td><td>{{o.customer_name}}</td><td>{{o.marketing_person}}</td>
+    <td><span class="status">{{o.current_status}}</span></td><td>₹ {{'%.2f'|format(o.total_order_value or 0)}}</td><td>{{o.updated_at}}</td>
+  </tr>{% else %}<tr><td colspan="7" class="muted">No records for this branch yet.</td></tr>{% endfor %}</tbody></table>
+</section>
+{% endblock %}

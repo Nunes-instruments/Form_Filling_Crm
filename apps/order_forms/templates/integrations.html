@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block content %}
+<div class="page-head"><div><h1>Google Drive / Sheets Integration</h1><p>Completed records can update a master Google Sheet and upload final PDF/XLSX files to Drive.</p></div></div>
+<section class="panel narrow"><form method="post" class="settings">
+<label class="switch"><input type="checkbox" name="enabled" {% if cfg.enabled %}checked{% endif %}> Enable Google synchronization</label>
+<label>Service-account JSON file path<input name="service_account_file" value="{{cfg.service_account_file}}" placeholder="google_service_account.json"><small>Place the JSON file in this application folder or enter an absolute path. Never upload it to a public server.</small></label>
+<label>Google Spreadsheet ID<input name="spreadsheet_id" value="{{cfg.spreadsheet_id}}"></label>
+<label>Worksheet name<input name="worksheet_name" value="{{cfg.worksheet_name}}"></label>
+<label>Google Drive Folder ID<input name="drive_folder_id" value="{{cfg.drive_folder_id}}"></label>
+<button class="btn primary">Save Integration Settings</button>
+</form>
+<div class="note"><b>Required Google setup:</b> enable Google Sheets API and Google Drive API in the Google Cloud project, create a service account, download its JSON key, and share the target Sheet/Drive folder with the service-account email. If credentials are not configured, the app keeps working and records remain Pending Sync.</div>
+</section>{% endblock %}

@@ -1,0 +1,32 @@
+NUNES OPERATIONS WORKSPACE - NETWORK / NTFS STARTUP FIX V7
+============================================================
+
+Problem fixed:
+  ERROR - Startup wrapper: Local NTFS volumes are required to complete the operation.
+
+Cause:
+  The owner/server project was being launched from a UNC/network share (for example
+  \\192.168.x.x\...). Windows directory junctions used by the reusable Node/Next/data
+  caches require the junction link itself to be on a local NTFS volume.
+
+Fix:
+  1. 1_SETUP_ALWAYS_ON_SERVER.bat may be run even when this package is stored on a
+     shared/network folder.
+  2. The setup detects UNC or mapped network drives automatically.
+  3. It creates/updates a local runtime at:
+       %LOCALAPPDATA%\NUNES Operations\WorkspaceRuntime\NUNES_OPERATIONS_WORKSPACE_V6_5_0
+  4. Scheduled tasks and the NUNES Operations desktop shortcut are configured to use
+     that local runtime.
+  5. Existing persistent Purchasing/Servicing data stays under LOCALAPPDATA and is
+     not intentionally deleted or reset.
+  6. The original shared folder remains the installation/update source only.
+
+ONE-TIME ACTION ON OWNER PC AFTER THIS UPDATE:
+  Double-click 1_SETUP_ALWAYS_ON_SERVER.bat and choose Yes for Administrator.
+  Let setup finish completely, then use the NUNES Operations desktop icon.
+
+STAFF PCs:
+  No server setup is required. Existing staff desktop shortcuts continue to use the
+  owner PC server URL. If needed, run 3_CONNECT_THIS_PC_TO_SHARED_SERVER.bat once.
+
+No dashboard UI, form UI, business workflow, or form fields were changed by this fix.

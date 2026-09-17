@@ -1,0 +1,11 @@
+V23: Settings render immediately from server-loaded, sanitized settings.
+Google connection status refreshes every 3 seconds and when returning from login.
+WhatsApp login requests are replayed while the resident starts (maximum 8 seconds).
+Success is not claimed until the actual runtime reports the login window/connection.
+Existing V22 Gmail default JSON and data/session preservation remain intact.
+
+OWNER: Extract and run 1_SETUP_ALWAYS_ON_SERVER.bat as Administrator; let it finish.
+Then open http://127.0.0.1:5055/settings on the owner PC and sign in/link once.
+Connected status updates automatically. Staff use their existing shortcuts.
+Contains private OAuth configuration: keep this ZIP within your company.
+Live login and delivery must be verified on the owner PC.

@@ -1,0 +1,17 @@
+NUNES OPERATIONS WORKSPACE V6.4.7
+
+CHROME / VERCEL LOCAL DATA BRIDGE FIX
+
+Problem fixed:
+- START_VERCEL_DATA_BRIDGE.bat could say READY while Chrome still showed Data offline.
+- Chrome 142+ gates public HTTPS -> loopback/local requests behind Local Network Access permission.
+- The older 300-550 ms browser probe was too short for the new browser permission flow.
+
+Changes:
+- Bridge starter passes the exact port to the production URL.
+- Browser tries the exact bridge first and waits longer.
+- Explicit Local Network Access target is used for loopback fetches.
+- Added CONNECT THIS PC button for a user-initiated permission/retry path.
+- Connection badge refreshes after bridge connection and on focus.
+- V6.4.6 form-wise/day-wise dashboard reporting is preserved.
+- Existing Purchasing and Servicing data stores are not changed.

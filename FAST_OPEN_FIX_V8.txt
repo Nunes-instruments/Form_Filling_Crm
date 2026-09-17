@@ -1,0 +1,32 @@
+NUNES OPERATIONS V6.5.0 - FAST OPEN V8
+======================================
+
+PURPOSE
+- Speed-only update.
+- No UI/UX, dashboard layout, form fields, reports, workflow, or business logic changed.
+
+WHAT WAS SLOW
+- If the main NUNES dashboard/data API was not already alive, the desktop launcher had to run the full startup path:
+  Node validation, Python validation, persistent data preparation, dashboard source/build cache validation, API startup, dashboard startup, and multi-port scanning.
+
+V8 FIX
+- Owner setup prepares the main dashboard + data API once.
+- Daily Windows logon starts a tiny local CompanyResident from LOCALAPPDATA.
+- CompanyResident launches the prepared Python data API directly on 8865.
+- CompanyResident launches the prepared Next.js standalone dashboard directly on 8765.
+- No npm/build/hash/bootstrap work is done during normal daily opening.
+- The desktop shortcut checks 127.0.0.1:8765 first and opens immediately when healthy.
+- If the resident is not yet running, the shortcut starts it and checks only the fixed fast port before falling back to the legacy recovery path.
+- Staff-PC LAN health checking is shortened for faster healthy opens.
+- Existing legacy startup remains as compatibility/recovery fallback.
+
+ONE-TIME OWNER ACTION
+1. Extract this ZIP to the desired folder.
+2. Run 1_SETUP_ALWAYS_ON_SERVER.bat once as Administrator.
+3. Let the one-time preparation finish completely.
+4. Restart Windows once.
+
+NORMAL DAILY USE
+- Owner PC: sign in to Windows. NUNES dashboard, data API, and Servicing are warmed automatically.
+- Owner: double-click NUNES Operations. It should use the already-hot resident server.
+- Staff: continue using the existing NUNES Operations shortcut.

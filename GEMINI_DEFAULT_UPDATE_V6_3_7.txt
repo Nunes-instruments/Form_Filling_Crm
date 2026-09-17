@@ -1,0 +1,10 @@
+NUNES Operations Workspace V6.3.8
+=================================
+- User-provided Gemini key is configured as the server-side default.
+- Servicing handwritten form extraction remains Gemini Vision only.
+- Groq and Tesseract OCR are not restored.
+- CONFIGURE_GEMINI.bat parser failure fixed by moving PowerShell logic into tools/configure-gemini.ps1.
+- Press Enter in CONFIGURE_GEMINI.bat to keep the bundled default key; enter another key to override it.
+- A key saved in persistent Servicing Settings overrides the bundled default.
+- Purchasing workflow unchanged.
+- Servicing business workflow unchanged.

@@ -1,0 +1,25 @@
+NUNES V22 - Gmail default setup and persistent WhatsApp Web login
+
+OWNER PC ONLY:
+1. Extract to your permanent NUNES folder.
+2. Run 1_SETUP_ALWAYS_ON_SERVER.bat as Administrator and let it finish.
+3. On the OWNER PC, open http://127.0.0.1:5055/settings in a normal browser.
+4. Click Sign in with Google. The supplied Desktop JSON is already configured.
+5. Select the sending Gmail account and approve the requested permissions.
+6. Click Open WhatsApp Web Login and link once in the dedicated official WhatsApp Web window.
+   Login opens on the owner PC, even when a staff PC presses the button.
+7. After connection the login window is minimized; leave that window running.
+   Future starts restore this same saved browser profile in the background.
+
+Google login must be completed on the owner PC because the Desktop OAuth callback
+uses 127.0.0.1:5055. JSON credentials alone do not authorize a Gmail account.
+If Google rejects login, the displayed Google error still needs to be resolved in
+that project's API/audience configuration. No account was authorized during packaging.
+
+This ZIP includes your private OAuth client JSON. Keep it within your company.
+Staff continue to use their existing NUNES shortcut; no Gmail/WhatsApp login needed there.
+Existing records, attachments, reports and stored authentication data are preserved.
+
+Changes: default server-side Gmail JSON; standalone private config copy;
+read-only WhatsApp status; no repeated launch during connection; keep authenticated
+browser alive instead of closing/relaunching it; updated source/runtime signatures.

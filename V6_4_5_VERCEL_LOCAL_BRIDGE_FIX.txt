@@ -1,0 +1,29 @@
+NUNES OPERATIONS WORKSPACE V6.4.6
+VERCEL LOCAL BRIDGE + 503 FALLBACK
+=================================
+
+FIXED
+- Vercel /api/data routes remain deployed (.vercelignore no longer excludes the src/app/api/data folder).
+- If NUNES_API_INTERNAL_URL is missing, the browser automatically checks the local NUNES Data API on ports 8865-8875.
+- Added CORS + Chrome Local Network / Private Network preflight support to the local Python data service.
+- Dashboard no longer becomes a full-page red 503 error when no cloud data source is configured.
+- Last successful dashboard snapshot remains visible during data disconnection.
+- If there is no previous snapshot, the dashboard opens as an empty disconnected view instead of crashing.
+- Header Data Connected status now recognizes the same-PC local bridge.
+- Purchasing/Servicing module start, status and report requests can use the same local bridge.
+- Module URLs now resolve to 127.0.0.1 when the Vercel UI is connected to the same-PC local bridge instead of incorrectly using the Vercel hostname with a local module port.
+- Added START_VERCEL_DATA_BRIDGE.bat for simple same-PC use.
+
+DATA SAFETY
+- Existing Purchasing SQLite data is not replaced.
+- Existing Servicing jobs/settings/uploads are not replaced.
+- Vercel deployment contains web code only; persistent local records remain outside the deployment.
+
+SAME-PC VERCEL USE
+1. Run START_VERCEL_DATA_BRIDGE.bat.
+2. Keep the main office PC on.
+3. Open https://nunes-operations-workspace.vercel.app
+4. If Chrome asks for Local Network Access, choose Allow.
+
+ACCESS FROM ANY DEVICE / WHEN OFFICE PC IS OFF
+A real cloud persistent database/server is still required. Configure NUNES_API_INTERNAL_URL and NUNES_DATA_API_TOKEN in Vercel for that mode.

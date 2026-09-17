@@ -1,0 +1,41 @@
+# Dependencies / builds
+node_modules/
+.next/
+.vercel/
+.nunes_runtime/
+*.log
+*.tsbuildinfo
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.key
+
+# NUNES persistent company data - NEVER commit/deploy these
+apps/order_forms/data/*
+!apps/order_forms/data/.keep
+apps/service_operations/data/*
+!apps/service_operations/data/.gitkeep
+backups/
+
+# Database sidecars
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Single-source / GitHub safety
+LOCAL_ONLY_SECRETS/
+apps/service_operations/config/google_oauth_client.json
+UPDATE_ID.txt
+OPEN_ON_OTHER_DEVICES.txt
+server-startup.log
+*.token.json
+*oauth*token*.json
+
+# Windows/local editor state
+.vscode/*.local.json
+Thumbs.db
+Desktop.ini

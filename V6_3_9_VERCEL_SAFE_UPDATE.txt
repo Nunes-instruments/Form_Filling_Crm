@@ -1,0 +1,26 @@
+NUNES OPERATIONS WORKSPACE V6.3.9 - VERCEL SAFE UPDATE
+======================================================
+
+ADDED
+- Vercel-ready platform_web configuration.
+- Persistent backend enforcement on Vercel (no silent localhost fallback).
+- Protected company-data gateway using NUNES_DATA_API_TOKEN.
+- Health diagnostics for deployment/data-backend configuration.
+- Git/Vercel ignore rules so company databases, jobs, uploads, settings and secrets are not committed/deployed.
+- Windows one-click backup before local updates.
+- GitHub Actions production deploy for platform_web.
+- Optional GitHub Actions safe update for the persistent Purchasing/Servicing backend.
+- Cloud installer/update support for /company-data with bearer authentication.
+
+PRESERVED
+- Purchasing SQLite schema and existing in-place upgrade logic.
+- Servicing jobs.json/settings/uploads storage format.
+- Existing dashboard/form/report behavior.
+- Same production-link model: keep one Vercel project/domain and replace only the code deployment.
+- Existing cloud updater's data-preservation behavior.
+
+IMPORTANT DATA FINDING
+The source ZIP provided in this chat contains empty placeholder data directories, not the real office records. No migration can truthfully be performed from this ZIP alone. Existing live records must remain on (or be copied from) the current office/cloud data backend before the Vercel production frontend is switched over.
+
+DEPLOYMENT ACCESS FINDING
+The Vercel account connected to ChatGPT currently exposes team "instruasia-6728". The requested target organization "instruaiglobal-spec" is not available in that connection, so this package was deliberately NOT deployed to the wrong account.

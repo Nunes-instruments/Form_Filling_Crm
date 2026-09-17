@@ -1,0 +1,18 @@
+NUNES V19 - OWNER OLD DATA CLEANUP OPTION
+=========================================
+
+New owner-only file:
+  OWNER_REMOVE_OLD_DATA_BEFORE_DATE.bat
+
+How it works:
+- Enter the FIRST date you want to keep (YYYY-MM-DD).
+- The tool previews how many Purchasing and Servicing records are older.
+- Records on the selected date and after it are kept.
+- Missing/unreadable-date records are kept for safety.
+- Before any deletion, an automatic recovery backup is stored under:
+    %LOCALAPPDATA%\NUNES Operations\OwnerArchive\
+- Only after typing the exact DELETE BEFORE <date> confirmation does cleanup run.
+- Related Servicing attachment folders are backed up and removed from active storage.
+- Existing sequence counters are preserved so cleanup does not intentionally reuse old service numbers.
+
+NO UI, WhatsApp, Gmail, Servicing startup, Purchasing workflow, report design, or normal business logic was changed.

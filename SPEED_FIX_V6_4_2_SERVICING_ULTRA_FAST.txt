@@ -1,0 +1,26 @@
+NUNES OPERATIONS WORKSPACE V6.4.2 - SERVICING ULTRA FAST
+
+What changed
+============
+1. A brand-new Servicing form now paints without waiting for jobs, settings, WhatsApp, suggestions, Gemini, reports or communication-status requests.
+2. Existing service jobs can open immediately from the last-good dashboard snapshot, then refresh the real live record in the background.
+3. Servicing HTML is returned immediately. Jobs/settings are no longer read before the first page is sent.
+4. Last successful service dashboard is restored instantly, then live jobs refresh in the background.
+5. WhatsApp/WPPConnect is completely removed from the Servicing startup package/path. It installs and starts only when WhatsApp is actually requested.
+6. Gemini is the only AI form-reading engine. Gemini is called only after the user starts the AI form-reading action.
+7. No OCR/Tesseract/Groq engine is used in the active service-form extraction path.
+8. Gemini upload UI is code-split and downloaded only when Upload Service Form is opened.
+9. Final paper preview is code-split and loaded only when Preview is used.
+10. Historical customer/product suggestions do not load at startup. They load once on the first real form interaction.
+11. Settings reuse the last-good browser cache immediately and refresh after first paint.
+12. New-job draft storage is debounced so typing on older PCs does not freeze.
+13. Service jobs/settings are memory-cached after the first server read; saved changes update the cache safely.
+14. Missing WhatsApp sidecar checks fail in milliseconds instead of holding the page for seconds.
+15. Lazy WhatsApp install has a lock so two browser checks cannot start two heavy installs simultaneously.
+16. Main NUNES startup no longer waits for Servicing before opening the company workspace; Servicing warms in parallel.
+17. Servicing module URL is stored persistently so repeat opens can go directly to the work area.
+18. Existing jobs.json, settings.json, uploads and historical records remain outside the code update flow and are not reset.
+
+Important
+=========
+The first run of a source version can still require one Next.js production build when that exact build is not already in the local cache. After the first successful build, the source-keyed production cache is reused. The normal Servicing page/form no longer waits for Gemini, OCR, WhatsApp or history scanning before it becomes usable.

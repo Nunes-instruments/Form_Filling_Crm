@@ -1,0 +1,14 @@
+NUNES OPERATIONS V6.5.0 - ONE-CLICK DESKTOP OPEN FIX
+=====================================================
+Fixes the case where double-clicking the NUNES Operations desktop icon appears to do nothing.
+
+Changes:
+- Desktop shortcut now points to a stable launcher under LocalAppData, not directly to an extracted BAT file.
+- Launcher window stays visible while the server is starting, then closes after the dashboard opens.
+- Existing local server is detected immediately.
+- If the server is stopped, the always-on scheduled task is started automatically.
+- If the scheduled task cannot be started, the local server BAT is started as a fallback.
+- Shared-client PCs verify the saved server address before opening.
+- Errors are shown instead of silently disappearing.
+- Scheduled Task command quoting is fixed for workspace paths containing spaces.
+- Existing Purchasing and Servicing data is not reset or deleted.

@@ -1,0 +1,9 @@
+NUNES V6.5.0 DESKTOP SHORTCUT FIX
+
+Fixes:
+- verifies OPEN_NUNES_DESKTOP.bat before creating the shortcut
+- falls back to 2_OPEN_NUNES_DESKTOP.bat when needed
+- shortcut now targets cmd.exe with a quoted launcher argument
+- adds 4_REPAIR_DESKTOP_SHORTCUT.bat
+- applies the same fix to shared-server client setup
+- does not delete Purchasing or Servicing data

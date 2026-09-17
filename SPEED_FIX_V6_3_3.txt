@@ -1,0 +1,15 @@
+NUNES Operations Workspace V6.3.3 - Servicing Instant Start
+
+Speed-only update. No workflow, form, dashboard, report, OCR, pricing, email or WhatsApp business logic changes.
+
+Improvements:
+- Servicing begins warming immediately after Node is available, before the company platform finishes starting.
+- Added native-Windows FAST_WARM_SERVICING.bat.
+- Reuses verified dependency and production-build caches with zero-copy NTFS junctions.
+- Added precomputed dependency signature, removing a PowerShell hash from normal startup.
+- Existing local .next + node_modules now take an instant launcher path and skip repeated PowerShell verification.
+- Global company shell prewarms Servicing as soon as the UI becomes interactive.
+- Forms route still performs an idempotent warm-up as a fallback.
+- Servicing readiness polling is faster for the first few seconds.
+- Slow npm install / next build path is used only when the verified caches do not exist.
+- WhatsApp sidecar remains enabled but starts on a delayed background path, never on the Servicing page critical path.

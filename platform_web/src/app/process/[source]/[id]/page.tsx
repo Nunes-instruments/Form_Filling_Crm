@@ -1,0 +1,1 @@
+import {notFound} from "next/navigation";import ProcessDetailClient from "@/components/ProcessDetailClient";export default async function Page({params}:{params:Promise<{source:string,id:string}>}){const {source,id}=await params;if(source!=="purchasing"&&source!=="servicing")notFound();return <ProcessDetailClient source={source as any} id={id}/>}

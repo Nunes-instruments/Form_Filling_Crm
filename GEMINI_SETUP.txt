@@ -1,0 +1,26 @@
+NUNES V6.3.8 - GEMINI FORM READER SETUP
+=======================================
+
+This build already contains the user-provided Gemini API key as the SERVER-SIDE default.
+You do not need to run CONFIGURE_GEMINI.bat before first use.
+
+Normal use:
+1. Run START_NUNES_COMPANY.bat
+2. Open Forms > Servicing
+3. Choose Upload Service Form
+4. Gemini Vision reads the image/PDF and fills the existing Service form.
+
+To change the Gemini key later:
+- Open Servicing > Settings > AI Handwritten Form Reader and save a new key, OR
+- Run CONFIGURE_GEMINI.bat. Press ENTER to keep the included default or paste a replacement.
+
+CONFIGURE_GEMINI.bat V6.3.8 FIX:
+The old long inline PowerShell command was removed. The BAT now calls a dedicated
+PowerShell script, so cmd.exe no longer corrupts PowerShell pipe characters with ^|.
+
+Security:
+The key is used only by server-side Gemini API routes. It is not returned by the
+Settings API and is not exposed to browser JavaScript. Because this ZIP contains a
+default key, anyone who receives the ZIP can potentially recover that key from the
+server configuration files. Rotate/change the key if the package will be shared outside
+your trusted company systems.

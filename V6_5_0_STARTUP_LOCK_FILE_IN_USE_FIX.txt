@@ -1,0 +1,10 @@
+NUNES Operations V6.5.0 - Startup Lock / File-In-Use Fix
+
+Fixed:
+- Prevents scheduled server, watchdog and desktop recovery from starting the dashboard build at the same time.
+- Adds one Windows named mutex around the complete server startup.
+- Watchdog now uses the same protected launcher.
+- Long-running Servicing, Data API and Dashboard child processes no longer inherit server-startup.log handles.
+- First watchdog check delayed to 3 minutes; mutex still protects longer first builds.
+- Compatible node_modules reuse now falls back safely if an older extracted folder is still using files.
+- Existing Purchasing and Servicing data paths are unchanged.

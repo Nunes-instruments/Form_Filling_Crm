@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block content %}
+<div class="page-head"><div><h1>Team Inbox</h1><p>Handover notifications and section readiness.</p></div></div>
+<section class="panel"><table class="data"><thead><tr><th>Time</th><th>Order</th><th>Message</th><th></th></tr></thead><tbody>
+{% for n in notifications %}<tr class="{% if not n.is_read %}unread{% endif %}"><td>{{n.created_at}}</td><td>{% if n.order_id %}<a href="{{url_for('order_form',oid=n.order_id)}}">{{n.quote_no or ('Order #'+n.order_id|string)}}</a>{% endif %}</td><td>{{n.message}}</td><td>{% if not n.is_read %}<form method="post" action="{{url_for('mark_read',nid=n.id)}}"><button class="mini">Mark read</button></form>{% endif %}</td></tr>{% endfor %}
+</tbody></table></section>
+{% endblock %}

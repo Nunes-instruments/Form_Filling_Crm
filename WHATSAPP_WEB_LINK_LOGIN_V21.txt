@@ -1,0 +1,27 @@
+NUNES V21 - WHATSAPP WEB LINK-ONCE LOGIN
+=========================================
+
+What changed
+------------
+- NUNES no longer generates its own WhatsApp login QR.
+- Settings now has: Open WhatsApp Web Login.
+- That opens the official WhatsApp Web page on the OWNER/SERVER PC using a dedicated persistent browser profile.
+- Complete the normal WhatsApp Web login once (official page QR or "Link with phone number").
+- After WhatsApp reports ready, the visible login window closes automatically.
+- NUNES then reconnects silently in background with the same saved profile on future Windows starts.
+- Automatic WhatsApp sending after Save & Preview uses this same saved login.
+
+Data safety
+-----------
+- Service jobs, Purchasing records, reports, attachments and history are not deleted.
+- Gmail configuration is unchanged.
+- Servicing startup/speed logic is unchanged.
+- The previous Baileys credentials are left untouched as a backup; V21 uses a new dedicated WhatsApp Web browser profile.
+
+Owner setup
+-----------
+1. Run 1_SETUP_ALWAYS_ON_SERVER.bat once as Administrator after installing V21.
+2. Open NUNES -> Settings -> WhatsApp Web Login.
+3. Click Open WhatsApp Web Login.
+4. Complete login in the official WhatsApp Web window on the owner/server PC.
+5. When linked, NUNES saves the profile and reconnects silently on later starts.

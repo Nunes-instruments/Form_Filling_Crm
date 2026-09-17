@@ -1,0 +1,13 @@
+NUNES OPERATIONS WORKSPACE V6.4.7
+Production project: nunes-operations-workspace
+Permanent domain: https://nunes-operations-workspace.vercel.app
+
+V6.4.7 includes:
+- V6.4.6 form-wise and day-wise form-fill reporting
+- Chrome 142+ Local Network Access bridge connection fix
+- exact bridge port passed to the Vercel URL
+- CONNECT THIS PC user-initiated permission/retry button
+- longer bridge permission timeout
+- same-project Vercel updater
+
+Run UPDATE_AND_CONNECT_VERCEL.bat for the easiest same-PC workflow.

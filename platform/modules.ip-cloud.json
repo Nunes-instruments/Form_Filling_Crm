@@ -1,0 +1,24 @@
+{
+  "order_forms": {
+    "name": "Purchasing Form",
+    "subtitle": "Purchasing workflow: Marketing to Final Approval",
+    "port": 8770,
+    "public_port": 8770,
+    "health_path": "/health",
+    "start_file": "START_SERVER.bat",
+    "app_dir": "apps/order_forms",
+    "home_path": "/",
+    "report_path": "/reports"
+  },
+  "service_operations": {
+    "name": "Servicing Form",
+    "subtitle": "Servicing workflow: Receive to Close",
+    "port": 5055,
+    "public_port": 5055,
+    "health_path": "/api/health",
+    "start_file": "START_SERVICE_JOB_APP.bat",
+    "app_dir": "apps/service_operations",
+    "home_path": "/jobs/new",
+    "report_path": "/"
+  }
+}

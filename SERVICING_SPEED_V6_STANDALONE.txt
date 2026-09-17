@@ -1,0 +1,13 @@
+NUNES Servicing Speed V6 - Standalone resident
+
+SPEED-ONLY CHANGES:
+- No UI/UX changes.
+- Servicing production build now emits Next.js standalone output.
+- Daily resident launch uses direct .next/standalone/server.js when available.
+- Owner desktop launcher also starts the local Servicing resident immediately.
+- Existing scheduled warm/keepalive remains in place.
+- Added CHECK_SERVICING_SPEED.bat for timing diagnostics only.
+
+IMPORTANT:
+Run 1_SETUP_ALWAYS_ON_SERVER.bat ONCE after extracting this V6 package.
+That one-time setup rebuilds Servicing in standalone mode and installs the new resident.

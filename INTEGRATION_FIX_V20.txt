@@ -1,0 +1,19 @@
+NUNES V20 — GMAIL + WHATSAPP CONNECTION FIX
+===========================================
+
+WHATSAPP
+- Replaces the Chromium/WPPConnect QR engine with browserless Baileys 6.7.24.
+- No Chrome/Edge startup is required to create the QR.
+- QR is produced directly from the WhatsApp WebSocket login event and converted to an image for Settings.
+- The API contract used by ServiceFlow is unchanged (/status, /prepare, /logout, /send).
+- New auth is stored at %LOCALAPPDATA%\ServiceFlow\whatsapp-baileys\auth.
+- Existing old WPPConnect files are left untouched; company history/data is never deleted.
+- Because this is a different WhatsApp engine, scan the QR once after installing V20.
+
+GMAIL
+- Google OAuth is now opened in a normal browser tab instead of inside the embedded ServiceFlow frame.
+- Google explicitly blocks OAuth authorization inside embedded user agents/frames.
+- Complete Gmail OAuth once on the OWNER/SERVER PC because the Desktop OAuth callback uses 127.0.0.1:5055.
+- Gmail API must be enabled and, when the OAuth consent screen is in Testing, the Gmail account must be added as a Test User.
+
+NO OTHER BUSINESS DATA OR FORM WORKFLOW IS CHANGED.

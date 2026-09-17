@@ -1,0 +1,15 @@
+NUNES Operations Workspace V6.3.2 - Servicing Fast Load
+
+Speed-only update. Business workflows and form source code are unchanged.
+
+Changes:
+1. Servicing and Purchasing start warming while the main platform is still building/starting.
+2. Entering Forms proactively starts both engines before a module card is clicked.
+3. Servicing reuses the Node.js runtime already prepared by the company launcher.
+4. WhatsApp/Chromium startup is deferred until after the Servicing web form is ready.
+5. Servicing production build is cached by exact source signature in LocalAppData and reused across future ZIP updates.
+6. A compatible .next build from an older extracted NUNES package can be imported into that cache automatically.
+7. The embedded workspace polls only the selected engine with a fresh fast health probe, so the iframe opens immediately after the server is actually ready.
+
+No Purchasing workflow changes.
+No Servicing workflow/form/report/OCR/pricing/email/WhatsApp business logic changes.

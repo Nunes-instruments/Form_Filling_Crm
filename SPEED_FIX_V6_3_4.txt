@@ -1,0 +1,22 @@
+NUNES Operations Workspace V6.3.5 - Servicing Hot Ready
+=======================================================
+Speed-only release. Business workflow and form fields are unchanged.
+
+Root cause fixed:
+- An older ServiceFlow process on port 5055 could survive from a previous extracted ZIP.
+- The old early warm-up saw the occupied port and exited.
+- The platform then replaced the stale service only after the employee opened Servicing, causing the visible "Starting..." delay.
+
+V6.3.5 changes:
+1. New START_EMBEDDED_FAST.bat validates whether port 5055 belongs to this exact extracted Servicing instance.
+2. A stale ServiceFlow from an older ZIP is stopped immediately during company startup, not after the user clicks Servicing.
+3. Exact cached node_modules + .next build are connected with zero-copy junctions and Next.js starts immediately.
+4. The platform module-start API now calls the fast embedded launcher for Servicing.
+5. Servicing starts as soon as the company launcher has Node.js available.
+6. The browser silently preloads the Servicing root page and JS assets after the engine becomes healthy.
+7. Forms checks startup state every 300ms; the embedded page uses faster readiness polling.
+8. WhatsApp remains deferred/background and cannot block the form web server.
+
+Target:
+- Repeat opening after one-time PC setup/cache: sub-second from Forms -> Servicing.
+- First-ever run on a completely new PC still requires one-time Node dependency installation and Next.js build and cannot physically be guaranteed under one second.

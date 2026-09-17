@@ -1,0 +1,14 @@
+NUNES OPERATIONS WORKSPACE V6.2
+
+LIVE FORM OUTPUT UPDATE
+
+- Main Owner Dashboard now shows recent Purchasing form outputs directly.
+- Main Owner Dashboard now shows recent Servicing form outputs directly.
+- The two sections are independent and are never compared.
+- Every output row can open the complete saved report in a dashboard modal.
+- Purchasing output includes customer, products, stage, value, received, outstanding, staff, status and update time.
+- Servicing output includes customer, product, problem, stage, estimate, staff, status and update time.
+- Full output modal includes workflow staff, products, payments, supplier/dispatch/accounts data where saved, and service repair/payment/dispatch/communication data where saved.
+- Dashboard continues to read the original Purchasing SQLite database and Servicing jobs.json directly.
+- No Purchasing or Servicing business workflow was merged or compared.
+- Windows launcher now checks the exact platform version so an older V6 process cannot silently reopen instead of the updated build.

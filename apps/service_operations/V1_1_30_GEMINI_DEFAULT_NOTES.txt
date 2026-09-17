@@ -1,0 +1,20 @@
+ServiceFlow V1.1.31 - GEMINI VISION ONLY
+
+Handwritten form import
+- Removed Groq from the service-form extraction path.
+- Removed Tesseract OCR and all OCR fallback/warm-up logic.
+- Removed OpenCV/template-zone preprocessing from the import path.
+- JPG/PNG/WEBP images are resized locally once and sent directly to Gemini Vision.
+- PDF Service Job Cards are sent directly to Gemini Vision.
+- Gemini returns structured JSON for the Service Job Card fields.
+- Existing local validation still checks phone, dates, money, product/model, totals and sign-off values before filling the draft.
+- Bottom sign-off names are now included in the Gemini extraction schema.
+- API key stays server-side. It is entered once in Settings or supplied with GEMINI_API_KEY.
+- Default model: gemini-2.5-flash. Optional fast model: gemini-2.5-flash-lite.
+
+Existing service workflow, jobs, pricing, Gmail, WhatsApp, reports and Save & Preview behavior are unchanged.
+
+V1.1.31 DEFAULT KEY UPDATE
+- Default Gemini API key is supplied server-side through .env.local.
+- A key saved in Service Settings takes priority over the default.
+- CONFIGURE_GEMINI.bat no longer uses a long inline PowerShell command.

@@ -1,0 +1,13 @@
+NUNES OPERATIONS V6.5.0 - SHARED DATA BOOT FIX
+
+FIXED
+- Windows CMD delayed-expansion bug in the shared data-service Python bootstrap.
+- PYFILE and PYEXE are now read with !variable! syntax inside the ELSE block.
+- Bootstrap failure now stops cleanly instead of continuing with an empty Python path.
+- Python 3.14 is accepted directly by the Purchasing module for faster startup.
+- Existing Purchasing and Servicing data is not reset or deleted.
+
+USE
+1. Extract this ZIP into a new folder.
+2. Run 1_SETUP_ALWAYS_ON_SERVER.bat once on the main server PC.
+3. Then open NUNES Operations from the desktop.

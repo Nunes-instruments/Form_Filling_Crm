@@ -1,0 +1,153 @@
+{% extends "base.html" %}{% block content %}
+{% set o=b.order %}{% set d=b.dispatch %}{% set a=b.accounts %}
+
+<div class="workflow-order-head">
+  <div class="workflow-order-title">
+    <div class="eyebrow">Active Order</div>
+    <h1>{{o.order_name or o.quote_no or ('Order #'+o.id|string)}}</h1>
+    <div class="muted">{{branch_by_key.get(o.branch, branch_by_key['MAIN']).name}} · {{o.market_type or 'IND'}} · {{o.customer_name or 'Customer not entered'}} · <span class="status">{{o.current_status}}</span></div>
+  </div>
+  <div class="workflow-head-actions">
+    <a class="btn" target="_blank" href="{{url_for('paper_view',oid=o.id)}}">Paper Form</a>
+    <a class="btn" href="{{url_for('export_pdf',oid=o.id)}}">PDF</a>
+    <a class="btn" href="{{url_for('export_excel',oid=o.id)}}">Excel</a>
+    <form method="post" action="{{url_for('manual_sync',oid=o.id)}}" class="inline"><button class="btn">Sync</button></form>
+  </div>
+</div>
+
+<section class="workflow-shell">
+  <div class="workflow-summary-row">
+    <div>
+      <span class="workflow-summary-label">Team workflow</span>
+      {% if current_step == 'completed' %}
+        <strong>All teams completed</strong>
+      {% else %}
+        <strong>Now with {{ workflow_steps | selectattr('key','equalto',current_step) | map(attribute='label') | first }}</strong>
+      {% endif %}
+    </div>
+    <div class="workflow-progress-copy"><b>{{progress}} / 6</b> completed</div>
+  </div>
+  <div class="workflow-progress-track"><span style="width:{{(progress/6*100)|round}}%"></span></div>
+
+  <div class="workflow-stepper" role="navigation" aria-label="Order workflow">
+    {% for step in workflow_steps %}
+      {% set done = o[step.complete_field] %}
+      {% set is_current = current_step == step.key %}
+      {% set is_active = active_step == step.key %}
+      {% if done or is_current %}
+      <a class="workflow-step {% if done %}done{% elif is_current %}current{% endif %} {% if is_active %}selected{% endif %}" href="{{url_for('order_form',oid=o.id,step=step.key)}}">
+        <span class="step-dot">{% if done %}✓{% else %}{{loop.index}}{% endif %}</span>
+        <span class="step-copy"><b>{{step.label}}</b><small>{% if done %}Completed{% elif is_current %}In progress{% else %}Ready{% endif %}</small></span>
+      </a>
+      {% else %}
+      <div class="workflow-step locked" aria-disabled="true">
+        <span class="step-dot">{{loop.index}}</span>
+        <span class="step-copy"><b>{{step.label}}</b><small>Waiting</small></span>
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+
+{% if active_step == 'completed' %}
+<section class="workflow-complete-card">
+  <div class="complete-mark">✓</div>
+  <div>
+    <div class="eyebrow">Workflow completed</div>
+    <h2>{{o.order_name or ('Order #'+o.id|string)}} is complete</h2>
+    <p>Marketing, Dispatch, Payment, Supplier, Accounts and Final Approval have all been completed.</p>
+    <div class="actions">
+      <a class="btn primary" target="_blank" href="{{url_for('paper_view',oid=o.id)}}">Open Final Paper Form</a>
+      <a class="btn" href="{{url_for('export_pdf',oid=o.id)}}">Download PDF</a>
+      <a class="btn" href="{{url_for('report_order_detail',oid=o.id)}}">Complete Report</a>
+      <a class="btn" href="{{url_for('dashboard')}}">Back to Task Board</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if active_step == 'marketing' %}
+<section class="workflow-stage-card">
+  <div class="stage-head"><div><span class="stage-number">01</span><div><div class="eyebrow">Marketing Team</div><h2>Marketing Details</h2><p>Enter the customer, quotation and product/order details. Complete this step to hand over to Dispatch.</p></div></div>{% if o.marketing_complete %}<span class="complete-pill">✓ Completed</span>{% else %}<span class="active-pill">Current Step</span>{% endif %}</div>
+  <form method="post" action="{{url_for('save_section',oid=o.id,section='marketing')}}" class="workflow-form" data-calc="marketing">
+    <fieldset {% if not can_edit('marketing') %}disabled{% endif %}>
+      <div class="grid4">
+        <label>Quote No<input name="quote_no" value="{{o.quote_no or ''}}"></label><label>Dt<input type="date" name="quote_date" value="{{o.quote_date or ''}}"></label>
+        <label>MKT Person<input name="marketing_person" value="{{o.marketing_person or ''}}"></label><label>Delivery Period<input name="delivery_period" value="{{o.delivery_period or ''}}"></label>
+        <label class="span2">Customer Name<input name="customer_name" value="{{o.customer_name or ''}}"></label><label>Place<input name="place" value="{{o.place or ''}}"></label><label>Terms<input name="terms" value="{{o.terms or ''}}"></label>
+        <label>IND / EXPORT<select name="market_type">{% for t in market_types %}<option value="{{t}}" {% if o.market_type==t %}selected{% endif %}>{{t}}</option>{% endfor %}</select></label>
+      </div>
+      <table class="formtable calc-marketing"><thead><tr><th>S.No</th><th>Item Name</th><th>Model</th><th>Qty</th><th>Item Value</th><th>Add. Charge</th><th></th></tr></thead>
+      <tbody id="marketingRows">{% set rows=b.marketing_items %}{% for i in range([rows|length,3]|max) %}{% set r=rows[i] if i<rows|length else None %}<tr><td class="rownum">{{i+1}}</td><td><input name="item_name[]" value="{{r.item_name if r else ''}}"></td><td><input name="model[]" value="{{r.model if r else ''}}"></td><td><input class="num qty" type="number" step="any" name="qty[]" value="{{r.qty if r else ''}}"></td><td><input class="num itemv" type="number" step="any" name="item_value[]" value="{{r.item_value if r else ''}}"></td><td><input class="num addc" type="number" step="any" name="add_charge[]" value="{{r.add_charge if r else ''}}"></td><td><button type="button" class="mini delrow">×</button></td></tr>{% endfor %}</tbody>
+      <tfoot><tr><td colspan="4"><button type="button" class="mini addrow" data-target="marketingRows" data-template="marketing">+ Add row</button></td><th>Total Order Value</th><th colspan="2" id="marketingTotal">₹ {{'%.2f'|format(o.total_order_value or 0)}}</th></tr></tfoot></table>
+      <div class="service-line"><label class="check"><input type="checkbox" name="service_demo" {% if o.service_demo %}checked{% endif %}> Demo</label><label class="check"><input type="checkbox" name="service_installation" {% if o.service_installation %}checked{% endif %}> Installation</label><label class="check"><input type="checkbox" name="service_calibration" {% if o.service_calibration %}checked{% endif %}> Calibration</label><label>Ser.Person<input name="service_person" value="{{o.service_person or ''}}"></label><label>Dt<input type="date" name="service_date" value="{{o.service_date or ''}}"></label><label>Amount<input class="num serviceamount" type="number" step="any" name="service_amount" value="{{o.service_amount or ''}}"></label></div>
+    </fieldset>
+    {% if can_edit('marketing') %}<div class="workflow-form-actions"><button class="btn" name="action" value="save">Save Draft</button><button class="btn primary next-btn" name="action" value="complete">Save & Complete <span>→ Dispatch</span></button></div>{% endif %}
+  </form>
+</section>
+{% endif %}
+
+{% if active_step == 'dispatch' %}
+<section class="workflow-stage-card">
+  <div class="stage-head"><div><span class="stage-number">02</span><div><div class="eyebrow">Dispatch Team</div><h2>Dispatch Details</h2><p>Complete packing and dispatch information. Saving as complete immediately moves the order to Payment.</p></div></div>{% if o.dispatch_complete %}<span class="complete-pill">✓ Completed</span>{% else %}<span class="active-pill">Current Step</span>{% endif %}</div>
+  <form method="post" action="{{url_for('save_section',oid=o.id,section='dispatch')}}" class="workflow-form">
+    <fieldset {% if not can_edit('dispatch') %}disabled{% endif %}><div class="grid3"><label>Packing By<input name="packing_by" value="{{d.packing_by if d else ''}}"></label><label>Dispatch On<input type="date" name="dispatch_on" value="{{d.dispatch_on if d else ''}}"></label><label>Weight<input name="weight" value="{{d.weight if d else ''}}"></label><label>Courier<select name="courier_mode"><option></option>{% for x in ['AIR','ROAD','RAILWAY','OTHER'] %}<option {% if d and d.courier_mode==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></label><label>Amount<input type="number" step="any" name="amount" value="{{d.amount if d else ''}}"></label><label>Sign<input name="sign" value="{{d.sign if d else ''}}"></label></div></fieldset>
+    {% if can_edit('dispatch') %}<div class="workflow-form-actions"><button class="btn" name="action" value="save">Save Draft</button><button class="btn primary next-btn" name="action" value="complete">Save & Complete <span>→ Payment</span></button></div>{% endif %}
+  </form>
+</section>
+{% endif %}
+
+{% if active_step == 'payment' %}
+<section class="workflow-stage-card">
+  <div class="stage-head"><div><span class="stage-number">03</span><div><div class="eyebrow">Payments Team</div><h2>Customer Payment Details</h2><p>Record received payments and balance. Complete this step to send the order to Supplier.</p></div></div>{% if o.payment_complete %}<span class="complete-pill">✓ Completed</span>{% else %}<span class="active-pill">Current Step</span>{% endif %}</div>
+  <form method="post" action="{{url_for('save_section',oid=o.id,section='payment')}}" class="workflow-form" data-calc="payment">
+    <fieldset {% if not can_edit('payment') %}disabled{% endif %}><table class="formtable"><thead><tr><th>Date</th><th>Bank Mode</th><th>Amount</th><th></th></tr></thead><tbody id="paymentRows">{% set rows=b.customer_payments %}{% for i in range([rows|length,3]|max) %}{% set r=rows[i] if i<rows|length else None %}<tr><td><input type="date" name="payment_date[]" value="{{r.payment_date if r else ''}}"></td><td><input name="bank_mode[]" value="{{r.bank_mode if r else ''}}"></td><td><input class="num payamt" type="number" step="any" name="payment_amount[]" value="{{r.amount if r else ''}}"></td><td><button type="button" class="mini delrow">×</button></td></tr>{% endfor %}</tbody><tfoot><tr><td colspan="2">Total Amount Received</td><th id="paymentTotal">₹ {{'%.2f'|format(cp_total)}}</th><td></td></tr><tr><td colspan="2">Balance</td><th id="paymentBalance" data-order-total="{{o.total_order_value or 0}}">₹ {{'%.2f'|format(cp_balance)}}</th><td></td></tr></tfoot></table><button type="button" class="mini addrow" data-target="paymentRows" data-template="payment">+ Add row</button></fieldset>
+    {% if can_edit('payment') %}<div class="workflow-form-actions"><button class="btn" name="action" value="save">Save Draft</button><button class="btn primary next-btn" name="action" value="complete">Save & Complete <span>→ Supplier</span></button></div>{% endif %}
+  </form>
+</section>
+{% endif %}
+
+{% if active_step == 'supplier' %}
+<section class="workflow-stage-card">
+  <div class="stage-head"><div><span class="stage-number">04</span><div><div class="eyebrow">Supplier Team</div><h2>Supplier Details</h2><p>Enter supplier comparison and order placement details. Complete this step to move to Accounts.</p></div></div>{% if o.supplier_complete %}<span class="complete-pill">✓ Completed</span>{% else %}<span class="active-pill">Current Step</span>{% endif %}</div>
+  <form method="post" action="{{url_for('save_section',oid=o.id,section='supplier')}}" class="workflow-form">
+    <fieldset {% if not can_edit('supplier') %}disabled{% endif %}><table class="formtable"><thead><tr><th>S.No</th><th>Supplier</th><th>Model</th><th>Net Value</th><th>Terms</th><th>Delivery Period</th><th></th></tr></thead><tbody id="supplierRows">{% set rows=b.supplier_rows %}{% for i in range([rows|length,3]|max) %}{% set r=rows[i] if i<rows|length else None %}<tr><td class="rownum">{{i+1}}</td><td><input name="supplier[]" value="{{r.supplier if r else ''}}"></td><td><input name="supplier_model[]" value="{{r.model if r else ''}}"></td><td><input type="number" step="any" name="net_value[]" value="{{r.net_value if r else ''}}"></td><td><input name="supplier_terms[]" value="{{r.terms if r else ''}}"></td><td><input name="supplier_delivery[]" value="{{r.delivery_period if r else ''}}"></td><td><button type="button" class="mini delrow">×</button></td></tr>{% endfor %}</tbody></table><button type="button" class="mini addrow" data-target="supplierRows" data-template="supplier">+ Add row</button><label class="longline">ORDER PLACE TO<input name="order_place_to" value="{{o.order_place_to or ''}}"></label></fieldset>
+    {% if can_edit('supplier') %}<div class="workflow-form-actions"><button class="btn" name="action" value="save">Save Draft</button><button class="btn primary next-btn" name="action" value="complete">Save & Complete <span>→ Accounts</span></button></div>{% endif %}
+  </form>
+</section>
+{% endif %}
+
+{% if active_step == 'accounts' %}
+<section class="workflow-stage-card wide-stage">
+  <div class="stage-head"><div><span class="stage-number">05</span><div><div class="eyebrow">Accounts Team</div><h2>Accounts Details</h2><p>Complete PO, courier, purchase, supplier payment and profile margin details before final approval.</p></div></div>{% if o.accounts_complete %}<span class="complete-pill">✓ Completed</span>{% else %}<span class="active-pill">Current Step</span>{% endif %}</div>
+  <form method="post" action="{{url_for('save_section',oid=o.id,section='accounts')}}" class="workflow-form" data-calc="accounts">
+    <fieldset {% if not can_edit('accounts') %}disabled{% endif %}>
+      <div class="subsection-title">Purchase & Delivery</div>
+      <div class="grid4"><label>Estimate Delivery Date<input type="date" name="estimate_delivery_date" value="{{a.estimate_delivery_date if a else ''}}"></label><label>PO Dt<input type="date" name="po_date" value="{{a.po_date if a else ''}}"></label><label>PO No<input name="po_no" value="{{a.po_no if a else ''}}"></label><label>Supplier Name<input name="supplier_name" value="{{a.supplier_name if a else ''}}"></label><label>Terms<input name="accounts_terms" value="{{a.terms if a else ''}}"></label><label>Proforma No<input name="proforma_no" value="{{a.proforma_no if a else ''}}"></label><label>Courier Today Basic<select name="courier_today_basic"><option></option><option {% if a and a.courier_today_basic=='Yes' %}selected{% endif %}>Yes</option><option {% if a and a.courier_today_basic=='No' %}selected{% endif %}>No</option></select></label><label>PDC On Delivery<select name="pdc_on_delivery"><option></option><option {% if a and a.pdc_on_delivery=='Yes' %}selected{% endif %}>Yes</option><option {% if a and a.pdc_on_delivery=='No' %}selected{% endif %}>No</option></select></label><label>Dispatch Dt<input type="date" name="dispatch_date" value="{{a.dispatch_date if a else ''}}"></label><label>Courier<input name="courier" value="{{a.courier if a else ''}}"></label><label>Packing Mode<input name="packing_mode" value="{{a.packing_mode if a else ''}}"></label><label>Docket No<input name="docket_no" value="{{a.docket_no if a else ''}}"></label><label>Courier Rs.<input type="number" step="any" name="courier_rs" value="{{a.courier_rs if a else ''}}"></label><label>Item Received On<input type="date" name="item_received_on" value="{{a.item_received_on if a else ''}}"></label><label>Additional Cost<input type="number" step="any" name="additional_cost" value="{{a.additional_cost if a else ''}}"></label><label>Weight<input name="accounts_weight" value="{{a.weight if a else ''}}"></label><label>Dispatch<select name="dispatch_method"><option></option>{% for x in ['ROAD','AIR','RAILWAY','OTHER'] %}<option {% if a and a.dispatch_method==x %}selected{% endif %}>{{x}}</option>{% endfor %}</select></label></div>
+      <div class="subsection-title">Purchase Items</div>
+      <table class="formtable accitems"><thead><tr><th>S.No</th><th>Particulars</th><th>Item Value</th><th>P&F Charges</th><th>Tax</th><th>Total</th><th></th></tr></thead><tbody id="accountRows">{% set rows=b.accounts_items %}{% for i in range([rows|length,3]|max) %}{% set r=rows[i] if i<rows|length else None %}<tr><td class="rownum">{{i+1}}</td><td><input name="particulars[]" value="{{r.particulars if r else ''}}"></td><td><input class="num aiv" type="number" step="any" name="acc_item_value[]" value="{{r.item_value if r else ''}}"></td><td><input class="num apf" type="number" step="any" name="pf_charges[]" value="{{r.pf_charges if r else ''}}"></td><td><input class="num atax" type="number" step="any" name="tax[]" value="{{r.tax if r else ''}}"></td><td class="rowtotal">{{'%.2f'|format(r.total if r else 0)}}</td><td><button type="button" class="mini delrow">×</button></td></tr>{% endfor %}</tbody><tfoot><tr><td colspan="5"><button type="button" class="mini addrow" data-target="accountRows" data-template="accounts">+ Add row</button></td><th>Bill Amount</th><th id="billAmount">₹ {{'%.2f'|format(bill_amount)}}</th></tr></tfoot></table>
+      <div class="grid2"><label>Purchase Bill No<input name="purchase_bill_no" value="{{a.purchase_bill_no if a else ''}}"></label><label>Bill Dt<input type="date" name="bill_date" value="{{a.bill_date if a else ''}}"></label></div>
+      <div class="subsection-title">Supplier Payment Details</div>
+      <table class="formtable"><thead><tr><th>S.No</th><th>Date</th><th>Bank & Branch</th><th>Mode</th><th>Amount</th><th></th></tr></thead><tbody id="supplierPaymentRows">{% set rows=b.supplier_payments %}{% for i in range([rows|length,3]|max) %}{% set r=rows[i] if i<rows|length else None %}<tr><td class="rownum">{{i+1}}</td><td><input type="date" name="sp_date[]" value="{{r.payment_date if r else ''}}"></td><td><input name="bank_branch[]" value="{{r.bank_branch if r else ''}}"></td><td><input name="sp_mode[]" value="{{r.mode if r else ''}}"></td><td><input class="num spamt" type="number" step="any" name="sp_amount[]" value="{{r.amount if r else ''}}"></td><td><button type="button" class="mini delrow">×</button></td></tr>{% endfor %}</tbody><tfoot><tr><td colspan="4">Balance</td><th id="supplierBalance" data-bill="{{bill_amount}}">₹ {{'%.2f'|format(supplier_balance)}}</th><td></td></tr></tfoot></table><button type="button" class="mini addrow" data-target="supplierPaymentRows" data-template="supplierPayment">+ Add row</button>
+      <div class="subsection-title">Profile Margin</div>
+      <div class="profile-grid"><label>Total Purchase Cost<input class="num pcost" type="number" step="any" name="total_purchase_cost" value="{{a.total_purchase_cost if a else ''}}"></label><label>Total Selling Cost<input class="num scost" type="number" step="any" name="total_selling_cost" value="{{a.total_selling_cost if a else o.total_order_value}}"></label><label>Profit<input id="profit" readonly value="{{a.profit if a else ''}}"></label><label>Profit in Percentage<input id="profitPct" readonly value="{{a.profit_percentage if a else ''}}"></label></div>
+      <label>Override / adjustment reason (if applicable)<input name="profile_override_reason" value="{{a.profile_override_reason if a else ''}}"></label><div class="grid2"><label>Remarks<textarea name="account_remarks">{{a.account_remarks if a else ''}}</textarea></label><label>Signature<input name="signature" value="{{a.signature if a else ''}}"></label></div>
+    </fieldset>
+    {% if can_edit('accounts') %}<div class="workflow-form-actions"><button class="btn" name="action" value="save">Save Draft</button><button class="btn primary next-btn" name="action" value="complete">Save & Complete <span>→ Final Approval</span></button></div>{% endif %}
+  </form>
+</section>
+{% endif %}
+
+{% if active_step == 'approval' %}
+<section class="workflow-stage-card">
+  <div class="stage-head"><div><span class="stage-number">06</span><div><div class="eyebrow">Final Stage</div><h2>Final Approval</h2><p>Review the completed order and approve it. This closes the workflow and marks the order Completed.</p></div></div>{% if o.approval_complete %}<span class="complete-pill">✓ Completed</span>{% else %}<span class="active-pill">Current Step</span>{% endif %}</div>
+  <div class="approval-review-strip"><span>Order Value <b>₹ {{'%.2f'|format(o.total_order_value or 0)}}</b></span><span>Customer Received <b>₹ {{'%.2f'|format(cp_total)}}</b></span><span>Purchase Cost <b>₹ {{'%.2f'|format(a.total_purchase_cost if a else 0)}}</b></span><span>Profit <b>₹ {{'%.2f'|format(a.profit if a else 0)}}</b></span></div>
+  <form method="post" action="{{url_for('save_section',oid=o.id,section='approval')}}" class="workflow-form"><fieldset {% if not can_edit('approval') %}disabled{% endif %}><div class="grid3"><label>Remarks<textarea name="remarks">{{o.remarks or ''}}</textarea></label><label>Approved by<input name="approved_by" value="{{o.approved_by or ''}}"></label><label>Date<input type="date" name="approval_date" value="{{o.approval_date or ''}}"></label></div></fieldset>{% if can_edit('approval') %}<div class="workflow-form-actions"><button class="btn" name="action" value="save">Save Draft</button><button class="btn success next-btn" name="action" value="complete">Final Complete & Sync <span>✓</span></button></div>{% endif %}</form>
+</section>
+{% endif %}
+
+<div class="bottom-grid workflow-bottom">
+<section class="panel"><h2>Team Comments</h2><form method="post" action="{{url_for('add_comment',oid=o.id)}}" class="comment-form"><textarea name="comment" placeholder="Add a handover note or internal comment..." required></textarea><button class="btn">Add Comment</button></form>{% for c in b.comments %}<div class="comment"><b>{{c.full_name}}</b><span>{{c.created_at}}</span><p>{{c.comment}}</p></div>{% endfor %}</section>
+<section class="panel"><h2>Activity / Audit</h2>{% for x in b.audit %}<div class="audit"><b>{{x.section}} · {{x.action}}</b><span>{{x.full_name or 'System'}} · {{x.created_at}}</span>{% if x.details %}<p>{{x.details}}</p>{% endif %}</div>{% endfor %}</section>
+</div>
+{% endblock %}

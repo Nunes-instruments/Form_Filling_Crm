@@ -1,0 +1,12 @@
+NUNES OPERATIONS WORKSPACE V6.5.0 - SERVICING SPEED ONLY V4
+
+Scope: Servicing startup speed only. No UI/UX/form/business-logic changes.
+
+Fix:
+- Servicing now executes from a small local runtime mirror under LocalAppData.
+- This prevents NAS/UNC/shared-folder latency from delaying Next.js startup.
+- Persistent ServiceData remains under LocalAppData and is connected to the local runtime.
+- Existing dependency/build caches are reused by source/dependency signature.
+- First-ever preparation is allowed to complete immediately instead of being deferred until the Forms page.
+- API repair-starts and Windows logon warm-starts use the same local runtime path.
+- Dashboard, Forms UI, Purchasing, reports and Servicing source UI are unchanged.

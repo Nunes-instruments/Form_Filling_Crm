@@ -1,0 +1,30 @@
+NUNES V16 - WHATSAPP QR FAST RESIDENT
+======================================
+Scope: WhatsApp login/QR speed and hidden background launch only.
+
+What changed
+- WhatsApp WPPConnect runtime is installed once during OWNER setup, not when Settings opens.
+- A hidden WhatsApp resident starts automatically at Windows sign-in and stays warm.
+- If login is required, Chromium/WhatsApp Web starts and prepares the QR in background.
+- Settings requests WhatsApp status directly and polls rapidly until QR/Connected is ready.
+- Gmail/other communication checks no longer delay QR rendering.
+- Full recursive Chrome profile scanning was removed from WhatsApp startup.
+- Existing WhatsApp tokens/profile are preserved unless the user explicitly chooses Disconnect/New QR.
+- Normal scheduled background launchers use hidden WScript wrappers to avoid black console flashes.
+
+Owner update
+1. Extract this ZIP to the permanent NUNES folder.
+2. Run 1_SETUP_ALWAYS_ON_SERVER.bat once as Administrator.
+3. Let the one-time WhatsApp runtime preparation finish.
+4. Restart Windows once.
+5. Open NUNES -> Settings -> WhatsApp Web Login.
+
+Daily use
+- No BAT file is required.
+- WhatsApp is prepared in background after Windows sign-in.
+- If the saved session is valid: status should become Connected.
+- If login is required: the QR should already be preparing before Settings is opened.
+
+Data safety
+This update does not clear Purchasing/Servicing history, jobs, reports, attachments,
+Gmail settings, or the saved WhatsApp login session.

@@ -1,0 +1,26 @@
+NUNES OPERATIONS WORKSPACE V6.5.0
+================================
+
+WHY SERVICING FELT SLOW
+- The ZIP did not contain platform node_modules or a ready .next build.
+- A newly extracted release could install/build the main Next.js dashboard again.
+- The Servicing screen waited for module health polling before showing the work area.
+- Startup used many serial PowerShell health checks.
+- Reopening the app could repeat runtime checks even when the server was already alive.
+
+V6.5.0 CHANGES
+- Fast reopen path: if dashboard + data API are already running, no Node/Python/bootstrap/build work runs.
+- Persistent PlatformCache in LOCALAPPDATA reuses platform dependencies and builds across launches/ZIP folders.
+- Servicing URL is opened immediately on office/LAN hosts; readiness checks happen in the background.
+- The Servicing iframe automatically reloads when its engine becomes ready.
+- One PowerShell wait loop replaces repeated one-second process launches.
+- OPEN_NUNES_DESKTOP.bat opens NUNES in Edge/Chrome app mode like a desktop application.
+- 1_SETUP_ALWAYS_ON_SERVER.bat makes one PC the always-on server and creates a desktop shortcut.
+- A 5-minute watchdog restores a crashed server/service without deleting data.
+- 3_CONNECT_THIS_PC_TO_SHARED_SERVER.bat connects other PCs once; afterwards they use the same desktop shortcut.
+- All connected devices use the same Purchasing and Servicing data on the server PC.
+
+DATA SAFETY
+- Existing Purchasing database is not reset.
+- Existing Servicing jobs/settings/uploads remain in the persistent ServiceData location.
+- No migration deletes existing records.

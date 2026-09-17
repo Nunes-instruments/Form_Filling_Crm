@@ -1,0 +1,25 @@
+NUNES OPERATIONS WORKSPACE V6.4.6
+FORM-WISE + DAY-WISE FORM FILLING UPDATE
+
+WHAT WAS ADDED
+1. Dashboard now shows total forms filled across both workflows.
+2. Purchasing form count is shown separately.
+3. Servicing form count is shown separately.
+4. Forms filled today is shown separately.
+5. This-month form counts are shown for Purchasing and Servicing.
+6. Day-wise table shows the last 14 days with:
+   Date | Purchasing Forms | Servicing Forms | Total Forms
+7. Reports page also shows the same form-wise and day-wise summary.
+8. Counts are calculated from EXISTING saved records only.
+   Purchasing uses record created_at (legacy fallback: quote_date).
+   Servicing uses createdAt (legacy fallback: jobDate).
+9. No old record is rewritten and no duplicate record is created for analytics.
+
+VERCEL UPDATE
+Run UPDATE_EXISTING_VERCEL.bat.
+It first tries to reuse the existing nunes-operations-workspace project link
+from an older extracted NUNES folder. It refuses to deploy if the linked
+project name is not nunes-operations-workspace.
+
+Permanent production URL:
+https://nunes-operations-workspace.vercel.app

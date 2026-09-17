@@ -1,0 +1,11 @@
+ServiceFlow V1.1.31 GEMINI VISION ONLY - VALIDATION
+
+- Gemini is the only handwritten Service Job Card extraction provider.
+- Images are resized locally once; PDF is passed directly.
+- Gemini returns structured JSON for all mapped service-card fields.
+- Local validators still protect phone/date/money/model/total values before form fill.
+- Sign-off names are included in the Gemini schema.
+- Groq extraction is not part of the application path.
+- Tesseract extraction is not part of the application path.
+- API keys are not returned by /api/settings.
+- Gemini key can be entered once in Settings or set with GEMINI_API_KEY.

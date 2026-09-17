@@ -1,0 +1,14 @@
+NUNES OPERATIONS WORKSPACE V6.5.0 - SERVER FIREWALL PORT FIX
+
+FIXED
+- Windows Firewall setup no longer sends grouped strings such as 5055,8770.
+- Windows Firewall setup no longer depends on range strings such as 8765-8775.
+- Every required NUNES port is validated and added individually.
+- A netsh fallback is used if the NetSecurity cmdlet fails on a Windows edition.
+- Previous V6.5.0 server-path quoting fix is included.
+- Purchasing and Servicing data are not deleted or reset.
+
+RUN
+1. Extract this ZIP to a NEW folder.
+2. Run 1_SETUP_ALWAYS_ON_SERVER.bat.
+3. Choose Yes when Windows requests Administrator permission.

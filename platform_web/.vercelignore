@@ -1,0 +1,12 @@
+node_modules
+.next
+.env
+.env.*.local
+*.log
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+backups
+.vercel

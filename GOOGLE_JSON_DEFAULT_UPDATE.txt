@@ -1,0 +1,11 @@
+NUNES GOOGLE OAUTH DEFAULT UPDATE
+
+Only the Google OAuth connection setup was changed.
+
+- The supplied Desktop OAuth JSON is bundled as the default server-side credential.
+- Settings now has two explicit options:
+  1. Use Default Google JSON
+  2. Add / Change Other Google JSON
+- A custom/saved JSON overrides the bundled default correctly.
+- Changing OAuth JSON clears only the old Google refresh token/email authorization, then requires one fresh Google sign-in.
+- Servicing jobs, forms, reports, WhatsApp, pricing and other workflows are unchanged.

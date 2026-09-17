@@ -1,0 +1,13 @@
+NUNES Operations Workspace V6.3.8
+ServiceFlow V1.1.30 - Gemini Vision Only
+
+Changed only the handwritten Service Job Card extraction method:
+- Gemini Vision is now the single AI extraction engine.
+- Groq extraction removed.
+- Tesseract OCR extraction removed.
+- Direct image/PDF -> Gemini -> structured fields -> local validation -> existing Service form.
+- Gemini key is not hard-coded into this shareable ZIP. Enter it once in Service Settings.
+- Purchasing workflow unchanged.
+- Servicing workflow after extraction unchanged.
+
+Security: do not distribute a ZIP containing live API keys.

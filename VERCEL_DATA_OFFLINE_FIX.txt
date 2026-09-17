@@ -1,0 +1,20 @@
+NUNES OPERATIONS WORKSPACE - FIX "DATA OFFLINE" ON VERCEL
+===========================================================
+
+The screenshot shows that the website itself is deployed, but the Vercel frontend cannot reach the persistent NUNES company-data server.
+This does NOT mean the old Purchasing/Servicing records were deleted.
+
+Vercel project:
+  nunes-operations-workspace
+Production link:
+  https://nunes-operations-workspace.vercel.app
+
+In Vercel Dashboard -> Project -> Settings -> Environment Variables, Production must contain:
+
+  NUNES_API_INTERNAL_URL=https://YOUR-PERSISTENT-NUNES-DATA-HOST/company-data
+  NUNES_DATA_API_TOKEN=YOUR_MATCHING_PRIVATE_DATA_TOKEN
+
+Then redeploy the SAME Vercel project. Do not create a new project.
+The production address remains the same.
+
+V6.4.1 now fails fast with a clear reason instead of waiting on repeated calls. It also opens from the last successful browser snapshot while the live connection is being refreshed.

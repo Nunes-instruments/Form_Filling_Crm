@@ -1,0 +1,31 @@
+NUNES OPERATIONS WORKSPACE V6.4.6
+================================
+
+FIXED
+- Next.js build failure in DashboardClient caused by dynamic() directly loading Recharts class components.
+- Recharts is now behind a small typed DashboardCharts wrapper and loads as one client-only chart chunk.
+- Dashboard and navigation typography enlarged for office use.
+- Vercel functions prefer Mumbai (bom1) to reduce latency for the Coimbatore office.
+- Data proxy timeout reduced so an offline backend does not leave a blank page for several seconds.
+- Revision polling stops when no live/saved dashboard data exists.
+- Existing Purchasing SQLite and Servicing JSON data formats are unchanged.
+
+IMPORTANT ABOUT VERCEL DATA OFFLINE
+The Vercel website and the local company database are two different machines.
+Vercel cannot call http://127.0.0.1 on your office PC. Production needs NUNES_API_INTERNAL_URL to be a PUBLIC HTTPS persistent data-service URL and NUNES_DATA_API_TOKEN to match that data service.
+Do not put the SQLite/jobs files inside a Vercel deployment: Vercel filesystem writes are not permanent.
+
+LOCAL RUN
+Double-click START_NUNES_COMPANY.bat.
+First install/build can take time. After a successful build, the .next build is reused.
+
+VERCEL DEPLOY
+1. Open Command Prompt in platform_web.
+2. Run: npm install
+3. Run: npm run build
+4. Run: vercel --prod
+5. Select/link the EXISTING nunes-operations-workspace project so the same production URL is retained.
+6. In Vercel > Project > Settings > Environment Variables set NUNES_API_INTERNAL_URL and NUNES_DATA_API_TOKEN for Production.
+7. Redeploy Production.
+
+The build fix is independent of your old business data; it does not reset or migrate records.

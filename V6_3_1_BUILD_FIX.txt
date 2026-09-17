@@ -1,0 +1,5 @@
+NUNES Operations Workspace V6.3.1
+
+Build-only hotfix:
+- Fixed Dashboard Retry button TypeScript event-handler mismatch.
+- No workflow, dashboard data, forms, reports, styling, or business logic changes.

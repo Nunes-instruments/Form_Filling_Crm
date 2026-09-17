@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NUNES Paper Form</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#d8d8d8;color:#4d5b82;font-family:Arial,Helvetica,sans-serif}
+  .print-actions{padding:12px;text-align:center}.print-actions button{padding:9px 18px;font-weight:700;cursor:pointer}
+  .paper-page{position:relative;width:210mm;height:297mm;margin:0 auto 14px;background:#fff;overflow:hidden;page-break-after:always}
+  .border{position:absolute;left:10.5mm;top:8mm;width:189mm;height:282mm;border:1mm solid #6676a6}
+  .blue{position:absolute;background:#6676a6;color:#fff;font-family:Georgia,"Times New Roman",serif;font-weight:700;line-height:7.5mm;height:7.5mm;padding-left:3mm;font-size:4.8mm;white-space:nowrap}
+  .blue.center{text-align:center;padding-left:0;font-family:Arial,Helvetica,sans-serif}
+  .company{position:absolute;top:12mm;left:25mm;width:160mm;text-align:center;font:700 5.1mm Georgia,"Times New Roman",serif;white-space:nowrap}
+  .serial{position:absolute;font:4.4mm Georgia,"Times New Roman",serif}
+  .field{position:absolute;height:5mm;font-size:2.9mm;font-weight:700;white-space:nowrap;overflow:hidden}
+  .field .value{font-weight:700}
+  .field:after{content:"";position:absolute;left:var(--line-left);right:0;bottom:.6mm;border-bottom:.25mm dotted #6676a6;z-index:0}
+  .field>*{position:relative;z-index:1;background:#fff}
+  .plain{position:absolute;font-size:2.95mm;font-weight:700;white-space:nowrap}
+  .paper-table{position:absolute;border-collapse:collapse;table-layout:fixed;font-size:2.7mm;color:#4d5b82}
+  .paper-table th,.paper-table td{border:.22mm solid #6676a6;padding:.9mm 1mm;text-align:center;overflow:hidden;white-space:nowrap}
+  .paper-table th{background:#f4f5f8;font-weight:700}
+  .paper-table td.left{text-align:left}
+  .service{position:absolute;left:20mm;top:110.8mm;width:170.5mm;height:7.5mm;border:.22mm solid #6676a6;padding:1.15mm 1.3mm;font-size:2.65mm;font-weight:700;white-space:nowrap;overflow:hidden}
+  .service .cb{display:inline-block;width:3.2mm;height:3.2mm;border:.22mm solid #6676a6;vertical-align:-.6mm;margin:0 1.4mm .0mm .7mm;text-align:center;line-height:2.7mm}
+  .orderline{position:absolute;left:22.5mm;top:249.8mm;width:160mm;font-size:3mm;font-weight:700;white-space:nowrap}
+  .orderline .fill{display:inline-block;width:124mm;border-bottom:.22mm solid #6676a6;margin-left:4mm;padding-left:1mm;height:4mm;overflow:hidden;vertical-align:-.5mm}
+  .box{position:absolute;border:.28mm solid #6676a6;font-size:2.8mm;font-weight:700;padding:2mm}
+  .dotrow{position:absolute;font-size:2.8mm;font-weight:700}
+  .dotline{display:inline-block;border-bottom:.25mm dotted #6676a6;height:3.4mm;overflow:hidden;vertical-align:-.4mm;padding-left:1mm}
+  .dbl{position:absolute;border-top:.25mm solid #6676a6;border-bottom:.25mm solid #6676a6;height:1.5mm}
+  .profile-box{position:absolute;border:.24mm solid #6676a6}
+  .profile-field{position:absolute;font-size:2.85mm;font-weight:700;white-space:nowrap}
+  .profile-field .line{display:inline-block;border-bottom:.22mm dotted #6676a6;min-width:43mm;height:3.5mm;vertical-align:-.5mm;padding-left:1mm;overflow:hidden}
+  @media print{
+    html,body{background:#fff}.print-actions{display:none}.paper-page{margin:0}
+    @page{size:A4;margin:0}
+  }
+</style>
+</head>
+<body>
+{% set o=b.order %}{% set d=b.dispatch %}{% set a=b.accounts %}
+<div class="print-actions"><button onclick="window.print()">Print / Save as PDF</button></div>
+
+<!-- PAGE 1: duplicates the Marketing/Dispatch/Payment/Supplier paper form -->
+<section class="paper-page">
+  <div class="border"></div>
+  <div class="company">NUNES INSTRUMENTS / INSTRUMENTATION</div>
+  <div class="serial" style="left:181mm;top:20mm">{{o.id}}</div>
+  <div class="blue" style="left:20mm;top:27mm;width:78mm">Marketing Details</div>
+
+  <div class="field" style="left:20mm;top:41.5mm;width:17mm;--line-left:14mm">Quote No: <span class="value">{{o.quote_no}}</span></div>
+  <div class="field" style="left:39mm;top:41.5mm;width:37.5mm;--line-left:7mm">Dt: <span class="value">{{o.quote_date}}</span></div>
+  <div class="field" style="left:78mm;top:41.5mm;width:59mm;--line-left:20mm">MKT Person: <span class="value">{{o.marketing_person}}</span></div>
+  <div class="field" style="left:140mm;top:41.5mm;width:50mm;--line-left:28mm">Delivery Period: <span class="value">{{o.delivery_period}}</span></div>
+
+  <div class="field" style="left:20mm;top:53.5mm;width:79mm;--line-left:28mm">Customer Name: <span class="value">{{o.customer_name}}</span></div>
+  <div class="field" style="left:101.5mm;top:53.5mm;width:49.5mm;--line-left:12mm">Place: <span class="value">{{o.place}}</span></div>
+  <div class="field" style="left:154mm;top:53.5mm;width:36mm;--line-left:12mm">Terms: <span class="value">{{o.terms}}</span></div>
+
+  <table class="paper-table" style="left:20mm;top:62mm;width:170.5mm;height:46mm">
+    <colgroup><col style="width:7%"><col style="width:38.7%"><col style="width:15.2%"><col style="width:10%"><col style="width:15.2%"><col style="width:13.9%"></colgroup>
+    <thead><tr style="height:7.5mm"><th>Sl.No</th><th>Item Name</th><th>Model</th><th>Qty</th><th>Item Value</th><th>Add.Charge</th></tr></thead>
+    <tbody>
+    {% for i in range(3) %}{% set r=b.marketing_items[i] if i<b.marketing_items|length else None %}
+      <tr style="height:10mm"><td>{{i+1}}.</td><td class="left">{{r.item_name if r else ''}}</td><td>{{r.model if r else ''}}</td><td>{{r.qty if r else ''}}</td><td>{{r.item_value if r else ''}}</td><td>{{r.add_charge if r else ''}}</td></tr>
+    {% endfor %}
+      <tr style="height:8.5mm"><td colspan="5" style="text-align:center;font-weight:700">Total Order Value</td><td>{{o.total_order_value}}</td></tr>
+    </tbody>
+  </table>
+
+  <div class="service">Demo <span class="cb">{{'✓' if o.service_demo else ''}}</span> Installation <span class="cb">{{'✓' if o.service_installation else ''}}</span> Calibration <span class="cb">{{'✓' if o.service_calibration else ''}}</span> Ser.Person : <span class="dotline" style="width:34mm">{{o.service_person}}</span> Dt : <span class="dotline" style="width:18mm">{{o.service_date}}</span> Amount: <span class="dotline" style="width:16mm">{{o.service_amount}}</span></div>
+
+  <div class="blue" style="left:20mm;top:122mm;width:69mm">Dispatch Details</div>
+  <div class="blue" style="left:98mm;top:122mm;width:77mm">Payment Details</div>
+
+  <div class="field" style="left:20mm;top:140.5mm;width:68mm;--line-left:20mm">Packing By: <span class="value">{{d.packing_by if d else ''}}</span></div>
+  <div class="field" style="left:20mm;top:153mm;width:37mm;--line-left:22mm">Dispatch On: <span class="value">{{d.dispatch_on if d else ''}}</span></div>
+  <div class="field" style="left:58mm;top:153mm;width:30mm;--line-left:14mm">Weight: <span class="value">{{d.weight if d else ''}}</span></div>
+  <div class="plain" style="left:20mm;top:165mm">Courier : AIR / ROAD / RAILWAY / OTHER</div>
+  <div class="field" style="left:20mm;top:178.5mm;width:34mm;--line-left:14mm">Amount: <span class="value">{{d.amount if d else ''}}</span></div>
+  <div class="field" style="left:56mm;top:178.5mm;width:32mm;--line-left:9mm">Sign: <span class="value">{{d.sign if d else ''}}</span></div>
+
+  <table class="paper-table" style="left:98mm;top:131.5mm;width:92mm;height:47mm">
+    <colgroup><col style="width:22.8%"><col style="width:52.2%"><col style="width:25%"></colgroup>
+    <thead><tr style="height:7.5mm"><th>Date</th><th>Bank Mode</th><th>Amount</th></tr></thead>
+    <tbody>
+    {% for i in range(3) %}{% set r=b.customer_payments[i] if i<b.customer_payments|length else None %}<tr style="height:10.5mm"><td>{{r.payment_date if r else ''}}</td><td>{{r.bank_mode if r else ''}}</td><td>{{r.amount if r else ''}}</td></tr>{% endfor %}
+      <tr style="height:8.5mm"><td colspan="2" style="font-weight:700;text-align:right;padding-right:8mm">Total Amount Received</td><td>{{cp_total}}</td></tr>
+    </tbody>
+  </table>
+  <div class="plain" style="left:145mm;top:180.7mm;width:20mm;text-align:center">Balance</div>
+  <div class="box" style="left:167mm;top:178.5mm;width:23mm;height:9.5mm;padding:2.5mm;text-align:center">{{cp_balance}}</div>
+
+  <div class="blue" style="left:20mm;top:189.5mm;width:68mm">Supplier Details</div>
+  <table class="paper-table" style="left:20mm;top:201mm;width:170.5mm;height:39.5mm">
+    <colgroup><col style="width:5.9%"><col style="width:37.5%"><col style="width:17%"><col style="width:14.7%"><col style="width:11.1%"><col style="width:13.8%"></colgroup>
+    <thead><tr style="height:8mm"><th>Sl.No</th><th>Supplier</th><th>Model</th><th>Net Value</th><th>Terms</th><th>Delivery<br>Period</th></tr></thead>
+    <tbody>{% for i in range(3) %}{% set r=b.supplier_rows[i] if i<b.supplier_rows|length else None %}<tr style="height:10.5mm"><td>{{i+1}}.</td><td class="left">{{r.supplier if r else ''}}</td><td>{{r.model if r else ''}}</td><td>{{r.net_value if r else ''}}</td><td>{{r.terms if r else ''}}</td><td>{{r.delivery_period if r else ''}}</td></tr>{% endfor %}</tbody>
+  </table>
+
+  <div class="orderline">ORDER PLACE TO : <span class="fill">{{o.order_place_to}}</span></div>
+  <div class="plain" style="left:166mm;top:262.5mm">Sign :</div>
+  <div class="box" style="left:20mm;top:270mm;width:118.5mm;height:18mm">Remarks : <span style="font-weight:400">{{o.remarks}}</span></div>
+  <div class="box" style="left:140.5mm;top:270mm;width:50mm;height:18mm;padding:2mm"><div>Date: <span style="font-weight:400">{{o.approval_date}}</span></div><div style="position:absolute;left:2mm;bottom:2mm">Approved by : <span style="font-weight:400">{{o.approved_by}}</span></div></div>
+</section>
+
+<!-- PAGE 2: duplicates the Accounts Details paper form -->
+<section class="paper-page">
+  <div class="border"></div>
+  <div class="blue center" style="left:61mm;top:7mm;width:88mm;height:10.5mm;line-height:10.5mm;border-radius:3mm">ACCOUNTS DETAILS</div>
+  <div class="serial" style="left:18mm;top:21mm">{{o.id}}</div>
+  <div class="plain" style="left:131mm;top:28.5mm;font-size:2.8mm">Estimate Delivery Date : <span class="dotline" style="width:21mm">{{a.estimate_delivery_date if a else ''}}</span></div>
+
+  <div class="box" style="left:18mm;top:39mm;width:34mm;height:14mm">PO Dt :-<div style="margin-top:2mm">{{a.po_date if a else ''}}</div></div>
+  <div class="box" style="left:55mm;top:39mm;width:35mm;height:14mm">PO No :-<div style="margin-top:2mm">{{a.po_no if a else ''}}</div></div>
+  <div class="box" style="left:93mm;top:39mm;width:66mm;height:14mm">Supplier Name :-<div style="margin-top:2mm">{{a.supplier_name if a else ''}}</div></div>
+  <div class="box" style="left:162mm;top:39mm;width:30mm;height:14mm">Terms :-<div style="margin-top:2mm">{{a.terms if a else ''}}</div></div>
+
+  <div class="field" style="left:18mm;top:62mm;width:64mm;--line-left:22mm">Proforma No. <span class="value">{{a.proforma_no if a else ''}}</span></div>
+  <div class="plain" style="left:85mm;top:62mm">Courier Today Basic Yes/No <span style="font-weight:400">{{a.courier_today_basic if a else ''}}</span></div>
+  <div class="plain" style="left:146mm;top:62mm">PDC On Delivery Yes/No <span class="dotline" style="width:8mm">{{a.pdc_on_delivery if a else ''}}</span></div>
+
+  <div class="field" style="left:18mm;top:74.5mm;width:54mm;--line-left:23mm">Dispatch Dt : <span class="value">{{a.dispatch_date if a else ''}}</span></div>
+  <div class="field" style="left:75mm;top:74.5mm;width:53mm;--line-left:15mm">Courier : <span class="value">{{a.courier if a else ''}}</span></div>
+  <div class="field" style="left:132mm;top:74.5mm;width:59mm;--line-left:25mm">Packing Mode : <span class="value">{{a.packing_mode if a else ''}}</span></div>
+
+  <div class="field" style="left:18mm;top:87mm;width:55mm;--line-left:20mm">Docket No : <span class="value">{{a.docket_no if a else ''}}</span></div>
+  <div class="field" style="left:76mm;top:87mm;width:52mm;--line-left:21mm">Courier Rs. : <span class="value">{{a.courier_rs if a else ''}}</span></div>
+  <div class="field" style="left:132mm;top:87mm;width:59mm;--line-left:31mm">Item Received On : <span class="value">{{a.item_received_on if a else ''}}</span></div>
+
+  <div class="field" style="left:18mm;top:99.5mm;width:54mm;--line-left:29mm">Additional Cost : <span class="value">{{a.additional_cost if a else ''}}</span></div>
+  <div class="field" style="left:75mm;top:99.5mm;width:43mm;--line-left:13mm">Weight: <span class="value">{{a.weight if a else ''}}</span></div>
+  <div class="plain" style="left:122mm;top:99.5mm">Dispatch : ROAD / AIR / RAILWAY / OTHER <span style="font-weight:400">{{a.dispatch_method if a else ''}}</span></div>
+
+  <table class="paper-table" style="left:18mm;top:109mm;width:174mm;height:47.5mm">
+    <colgroup><col style="width:6.3%"><col style="width:45.4%"><col style="width:14.4%"><col style="width:12.6%"><col style="width:11.5%"><col style="width:9.8%"></colgroup>
+    <thead><tr style="height:8mm"><th>S.No</th><th>Particulars</th><th>Item Value</th><th>P&amp;F<br>Charges</th><th>Tax</th><th>Total</th></tr></thead>
+    <tbody>{% for i in range(3) %}{% set r=b.accounts_items[i] if i<b.accounts_items|length else None %}<tr style="height:10.5mm"><td>{{i+1}}</td><td class="left">{{r.particulars if r else ''}}</td><td>{{r.item_value if r else ''}}</td><td>{{r.pf_charges if r else ''}}</td><td>{{r.tax if r else ''}}</td><td>{{r.total if r else ''}}</td></tr>{% endfor %}<tr style="height:8mm"><td colspan="5" style="text-align:right;font-weight:700;padding-right:8mm">Bill Amount</td><td>{{bill_amount}}</td></tr></tbody>
+  </table>
+
+  <div class="field" style="left:18mm;top:158mm;width:75mm;--line-left:30mm">Purchase Bill No : <span class="value">{{a.purchase_bill_no if a else ''}}</span></div>
+  <div class="field" style="left:98mm;top:158mm;width:41mm;--line-left:13mm">Bill Dt: <span class="value">{{a.bill_date if a else ''}}</span></div>
+
+  <div class="blue" style="left:18mm;top:165mm;width:60mm">Payment Details</div>
+  <table class="paper-table" style="left:18mm;top:174mm;width:174mm;height:8mm">
+    <colgroup><col style="width:6.3%"><col style="width:19.5%"><col style="width:41.4%"><col style="width:20.1%"><col style="width:12.7%"></colgroup><thead><tr><th>S.No</th><th>Date</th><th>Bank &amp; Branch</th><th>Mode</th><th>Amount</th></tr></thead>
+  </table>
+  {% for i in range(3) %}{% set r=b.supplier_payments[i] if i<b.supplier_payments|length else None %}{% set yy=188 + i*13 %}
+    <div class="dotrow" style="left:24mm;top:{{yy}}mm">{{i+1}}.</div>
+    <div class="dotrow" style="left:33mm;top:{{yy}}mm"><span class="dotline" style="width:28mm">{{r.payment_date if r else ''}}</span></div>
+    <div class="dotrow" style="left:64mm;top:{{yy}}mm"><span class="dotline" style="width:66mm">{{r.bank_branch if r else ''}}</span></div>
+    <div class="dotrow" style="left:133mm;top:{{yy}}mm"><span class="dotline" style="width:30mm">{{r.mode if r else ''}}</span></div>
+    <div class="dotrow" style="left:166mm;top:{{yy}}mm"><span class="dotline" style="width:24mm">{{r.amount if r else ''}}</span></div>
+  {% endfor %}
+  <div class="plain" style="left:145mm;top:227mm">Balance :- <span class="dotline" style="width:24mm">{{supplier_balance}}</span></div>
+  <div class="dbl" style="left:166mm;top:235.5mm;width:24mm"></div>
+
+  <div class="blue center" style="left:18mm;top:244mm;width:174mm">Profile Margin</div>
+  <div class="profile-box" style="left:18mm;top:251.5mm;width:174mm;height:23mm"></div>
+  <div class="profile-field" style="left:22mm;top:256mm">Total Purchase Cost : <span class="line">{{a.total_purchase_cost if a else ''}}</span></div>
+  <div class="profile-field" style="left:102mm;top:256mm">Total Selling Cost : <span class="line">{{a.total_selling_cost if a else ''}}</span></div>
+  <div class="profile-field" style="left:22mm;top:267mm">Profit : <span class="line" style="min-width:58mm">{{a.profit if a else ''}}</span></div>
+  <div class="profile-field" style="left:102mm;top:267mm">Profit in Percentage : <span class="line" style="min-width:40mm">{{a.profit_percentage if a else ''}}%</span></div>
+
+  <div class="plain" style="left:22mm;top:282mm">Remarks : <span class="dotline" style="width:67mm">{{a.account_remarks if a else ''}}</span></div>
+  <div class="plain" style="left:151mm;top:282mm">Signature : <span class="dotline" style="width:18mm">{{a.signature if a else ''}}</span></div>
+</section>
+</body>
+</html>

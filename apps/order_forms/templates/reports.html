@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% block content %}
+<div class="page-head"><div><h1>Reports</h1><p>Operational, payment and margin overview.</p></div><a class="btn primary" href="{{url_for('master_excel')}}">Download Master Excel</a></div>
+
+<div class="toolbar branch-filter" style="gap:8px;flex-wrap:wrap">
+  <strong style="margin-right:4px">Branch:</strong>
+  <a class="btn {% if not branch %}primary{% endif %}" href="{{url_for('reports',start=start,end=end,status=status,market_type=market_type)}}">All</a>
+  {% for b in branches %}
+  <a class="btn {% if branch==b.key %}primary{% endif %}" href="{{url_for('reports',start=start,end=end,status=status,branch=b.key,market_type=market_type)}}">{{b.name}}</a>
+  {% endfor %}
+</div>
+
+<div class="toolbar branch-filter" style="gap:8px;flex-wrap:wrap">
+  <strong style="margin-right:4px">IND / EXPORT:</strong>
+  <a class="btn {% if not market_type %}primary{% endif %}" href="{{url_for('reports',start=start,end=end,status=status,branch=branch)}}">All</a>
+  <a class="btn {% if market_type=='IND' %}primary{% endif %}" href="{{url_for('reports',start=start,end=end,status=status,branch=branch,market_type='IND')}}">IND</a>
+  <a class="btn {% if market_type=='EXPORT' %}primary{% endif %}" href="{{url_for('reports',start=start,end=end,status=status,branch=branch,market_type='EXPORT')}}">EXPORT</a>
+</div>
+
+<form class="toolbar">
+  <input type="hidden" name="branch" value="{{branch}}">
+  <input type="hidden" name="market_type" value="{{market_type}}">
+  <label>From<input type="date" name="start" value="{{start}}"></label>
+  <label>To<input type="date" name="end" value="{{end}}"></label>
+  <label>Status<select name="status"><option value="">All</option>{% for s in ['Draft','In Progress','Waiting for Dispatch','Waiting for Payment','Waiting for Supplier','Waiting for Accounts','Waiting for Approval','Completed'] %}<option {% if status==s %}selected{% endif %}>{{s}}</option>{% endfor %}</select></label>
+  <button class="btn">Apply</button>
+</form>
+
+<section class="panel"><table class="data"><thead><tr><th>Order ID</th><th>Branch</th><th>IND / EXPORT</th><th>Quote</th><th>Date</th><th>Customer</th><th>Status</th><th>Order Value</th><th>Received</th><th>Outstanding</th><th>Purchase</th><th>Selling</th><th>Profit</th><th>Margin %</th><th>Details</th></tr></thead><tbody>
+{% for r in rows %}<tr>
+<td><a href="{{url_for('order_form',oid=r.id)}}"><strong>{{r.order_name or ('Order #'+r.id|string)}}</strong></a></td>
+<td>{{branch_by_key.get(r.branch, branch_by_key['MAIN']).name}}</td>
+<td><span class="status">{{r.market_type or 'IND'}}</span></td>
+<td>{{r.quote_no}}</td><td>{{r.quote_date}}</td><td>{{r.customer_name}}</td><td>{{r.current_status}}</td><td>{{'%.2f'|format(r.total_order_value or 0)}}</td><td>{{'%.2f'|format(r.received or 0)}}</td><td>{{'%.2f'|format((r.total_order_value or 0)-(r.received or 0))}}</td><td>{{'%.2f'|format(r.purchase_cost or 0)}}</td><td>{{'%.2f'|format(r.selling_cost or 0)}}</td><td>{{'%.2f'|format(r.profit or 0)}}</td><td>{{'%.2f'|format(r.profit_percentage or 0)}}</td><td><a class="btn mini" href="{{url_for('report_order_detail',oid=r.id)}}">Complete Details</a></td></tr>{% else %}<tr><td colspan="15" class="muted">No matching records.</td></tr>{% endfor %}
+</tbody></table></section>{% endblock %}

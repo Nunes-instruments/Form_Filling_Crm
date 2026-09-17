@@ -1,0 +1,15 @@
+export type Person = { stage?: string; person?: string; role_detail?: string; completed?: boolean; updated_at?: string };
+export type RecentPurchase = { id:number; order_id:string; customer:string; branch:string; status:string; value:number; outstanding?:number; updated_at:string; staff:string[]; current_stage?:string; progress?:number; latest_person?:string; responsible_team?:string; priority?:string; needs_attention?:boolean };
+export type RecentService = { id:string; job_no:string; customer:string; branch:string; status:string; estimate:number; updated_at:string; staff:string[]; current_stage?:string; progress?:number; latest_person?:string; product?:string; responsible_team?:string; priority?:string; needs_attention?:boolean };
+export type Overview = { generated_at:string; forms:any; service:any; modules:any; system:any };
+export type ProcessPayload = { purchasing: RecentPurchase[]; servicing: RecentService[]; generated_at:string };
+export type TaskItem = { id:string|number; source:"purchasing"|"servicing"; record_no:string; customer:string; product?:string; branch:string; current_stage:string; status:string; progress:number; responsible_team:string; assigned_to?:string; priority:"High"|"Normal"|"Low"; updated_at:string; waiting_hours:number; needs_attention:boolean; action_path:string };
+export type TasksPayload = { generated_at:string; purchasing:TaskItem[]; servicing:TaskItem[]; summary:{active:number;waiting:number;needs_attention:number;completed_today:number} };
+export type ActivityItem = { id:string; source:"purchasing"|"servicing"; record_id:string|number; record_no:string; customer?:string; person?:string; department?:string; action:string; detail?:string; timestamp:string; kind?:string };
+export type ActivityPayload = { generated_at:string; items:ActivityItem[]; source_counts:{purchasing:number;servicing:number} };
+export type TeamPerson = { name:string; purchasing_actions:number; purchasing_records:number; servicing_jobs:number; service_roles:string[]; latest_activity:string; modules:string[] };
+export type TeamPayload = { generated_at:string; people:TeamPerson[]; purchasing_users:any[]; summary:{people:number;purchasing_people:number;servicing_people:number} };
+export type SearchResult = { source:"purchasing"|"servicing"; id:string|number; record_no:string; title:string; subtitle:string; status:string; stage:string; matched:string; updated_at:string };
+export type SearchPayload = { query:string; results:SearchResult[] };
+export type NotificationItem = { id:string; source:"purchasing"|"servicing"|"system"; title:string; detail:string; severity:"info"|"warning"|"danger"; timestamp:string; href?:string };
+export type NotificationPayload = { generated_at:string; count:number; items:NotificationItem[] };

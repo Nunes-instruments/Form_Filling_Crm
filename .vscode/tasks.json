@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "NUNES: Apply VS Code changes LIVE",
+      "type": "shell",
+      "command": "${workspaceFolder}\\F_APPLY_VSCODE_CHANGES_LIVE.bat",
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "NUNES: Save version to GitHub",
+      "type": "shell",
+      "command": "${workspaceFolder}\\G_SAVE_TO_GITHUB.bat",
+      "problemMatcher": []
+    },
+    {
+      "label": "NUNES: Pull GitHub and apply LIVE",
+      "type": "shell",
+      "command": "${workspaceFolder}\\H_PULL_GITHUB_AND_APPLY.bat",
+      "problemMatcher": []
+    }
+  ]
+}

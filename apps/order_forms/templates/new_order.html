@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block content %}
+<div class="narrow panel"><h1>Create New Record</h1><p>Select the branch first. The Order ID uses the branch prefix + month letter + one shared running number for all branches.</p>
+<form method="post" class="grid2">
+<label class="span2">Company / Branch<select name="branch" required>{% for b in branches %}<option value="{{b.key}}" {% if b.key==selected_branch %}selected{% endif %}>{{b.name}}</option>{% endfor %}</select></label>
+<label>IND / EXPORT<select name="market_type" required><option value="IND">IND</option><option value="EXPORT">EXPORT</option></select></label><label>Quote Date<input type="date" name="quote_date"></label>
+<label>Quote No<input name="quote_no"></label><label>Customer Name<input name="customer_name"></label>
+<label class="span2">Marketing Person<input name="marketing_person" value="{{current_user.full_name if current_user.role in ['Marketing','Admin'] else ''}}"></label>
+<div class="span2 muted">Example shared sequence: 1st order Main = NMS1, 2nd order Gandhipuram = NGS2, 3rd order Gopalapuram = NGOS3, 4th order Main = NMS4. The number never resets when branch or month changes.</div>
+<div class="span2 actions"><a class="btn" href="{{url_for('orders')}}">Cancel</a><button class="btn primary">Create & Open</button></div></form></div>
+{% endblock %}

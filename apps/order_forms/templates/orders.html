@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block content %}
+<div class="page-head"><div><h1>Orders / Jobs</h1><p>Search all department records{% if branch %} for {{branch_by_key[branch].name}}{% endif %}.</p></div><a class="btn primary" href="{{url_for('new_order',branch=branch)}}">+ New Order</a></div>
+<form class="toolbar"><input name="q" placeholder="Order ID, quote no, customer, MKT person, place..." value="{{q}}"><select name="branch"><option value="">All branches</option>{% for b in branches %}<option value="{{b.key}}" {% if branch==b.key %}selected{% endif %}>{{b.name}}</option>{% endfor %}</select><select name="status">
+<option value="">All statuses</option>{% for s in ['Draft','In Progress','Waiting for Dispatch','Waiting for Payment','Waiting for Supplier','Waiting for Accounts','Waiting for Approval','Completed'] %}<option {% if status==s %}selected{% endif %}>{{s}}</option>{% endfor %}
+</select><button class="btn">Search</button></form>
+<section class="panel"><table class="data"><thead><tr><th>Order ID</th><th>Branch</th><th>Quote No</th><th>Date</th><th>Customer</th><th>Place</th><th>MKT</th><th>Value</th><th>Status</th></tr></thead><tbody>
+{% for o in orders %}<tr><td><a href="{{url_for('order_form',oid=o.id)}}">{{o.order_name or ('Order #'+o.id|string)}}</a></td><td>{{branch_by_key.get(o.branch, branch_by_key['MAIN']).name}}</td><td>{{o.quote_no or ''}}</td><td>{{o.quote_date}}</td><td>{{o.customer_name}}</td><td>{{o.place}}</td><td>{{o.marketing_person}}</td><td>₹ {{'%.2f'|format(o.total_order_value or 0)}}</td><td><span class="status">{{o.current_status}}</span></td></tr>{% endfor %}
+</tbody></table></section>
+{% endblock %}

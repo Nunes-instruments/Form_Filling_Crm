@@ -1,0 +1,27 @@
+NUNES V6.4.7 - CHROME DATA OFFLINE FIX
+=======================================
+
+If START_VERCEL_DATA_BRIDGE.bat says READY but the Vercel page still says
+Data offline, Chrome is normally blocking the public Vercel website from
+reaching the loopback server on this PC.
+
+V6.4.7 automatically opens:
+https://nunes-operations-workspace.vercel.app/?bridge=<actual-port>&connect=local
+
+Then:
+1. Keep START_VERCEL_DATA_BRIDGE.bat running.
+2. On the amber dashboard banner click CONNECT THIS PC.
+3. If Chrome asks to find/connect to devices on the local network, choose Allow.
+4. If you already denied it, click the site controls icon beside the address bar,
+   open Site settings, set Local network access to Allow, and reload the page.
+5. The top-right badge should change from Data offline to Data connected.
+
+V6.4.7 waits several seconds for the Chrome permission flow. Older versions
+aborted the bridge check in about half a second, which could leave the bridge
+READY in Windows while the browser still showed Data offline.
+
+DATA SAFETY
+-----------
+The Vercel deployment contains web code only. Purchasing SQLite data and
+Servicing jobs/settings/uploads stay outside the web deployment and are not
+recreated by this fix.

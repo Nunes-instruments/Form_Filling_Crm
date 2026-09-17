@@ -1,0 +1,24 @@
+NUNES Operations Workspace V6.3.5 — Servicing Always Ready
+===========================================================
+
+Purpose
+-------
+Remove the repeated Servicing cold-start delay seen on Forms.
+
+Architecture changes
+--------------------
+1. Node.js is prepared first, then Servicing starts immediately while the Python/data API and company platform continue loading.
+2. The company browser is not opened until the Servicing health endpoint confirms that ServiceFlow V1.1.28 is ready (up to the one-time setup limit).
+3. Servicing data is migrated once to:
+   %LOCALAPPDATA%\NUNES Operations\ServiceData
+   Each extracted V6.3.5+ package uses a zero-copy Windows junction to this same data.
+4. Because data is shared persistently, an already-running compatible ServiceFlow from another V6.3.5+ folder can stay running instead of being killed only because the ZIP was extracted to a new folder.
+5. The Forms page loads module readiness independently from report/task data and stops rapid health polling once modules are ready.
+6. The ready Servicing URL is saved in browser session storage. Clicking Open Servicing can render the already-preloaded form immediately instead of waiting for another start/status cycle.
+7. A hidden preloader warms the Servicing HTML/JS before the employee opens it.
+
+First upgrade note
+------------------
+The first V6.3.5 run may briefly restart the old Servicing process once while it migrates existing service data to the shared persistent directory. After that migration, repeat starts and future V6.3.5-compatible package folders reuse the hot Servicing process/data.
+
+No Purchasing or Servicing business workflow stages were changed.

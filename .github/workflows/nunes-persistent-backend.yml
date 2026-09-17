@@ -1,0 +1,53 @@
+name: Update NUNES Persistent Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/order_forms/**'
+      - 'apps/service_operations/**'
+      - 'platform/**'
+      - 'cloud/**'
+      - '.github/workflows/nunes-persistent-backend.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: nunes-persistent-backend
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SSH
+        env:
+          NUNES_BACKEND_SSH_KEY: ${{ secrets.NUNES_BACKEND_SSH_KEY }}
+          NUNES_BACKEND_HOST: ${{ secrets.NUNES_BACKEND_HOST }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$NUNES_BACKEND_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$NUNES_BACKEND_HOST" >> ~/.ssh/known_hosts
+      - name: Upload code only - never upload company data
+        env:
+          NUNES_BACKEND_HOST: ${{ secrets.NUNES_BACKEND_HOST }}
+          NUNES_BACKEND_USER: ${{ secrets.NUNES_BACKEND_USER }}
+        run: |
+          set -euo pipefail
+          ssh "$NUNES_BACKEND_USER@$NUNES_BACKEND_HOST" 'rm -rf /tmp/nunes-release && mkdir -p /tmp/nunes-release'
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'apps/order_forms/data/' \
+            --exclude 'apps/service_operations/data/' \
+            --exclude 'backups/' \
+            ./ "$NUNES_BACKEND_USER@$NUNES_BACKEND_HOST:/tmp/nunes-release/"
+      - name: Apply safe backend update
+        env:
+          NUNES_BACKEND_HOST: ${{ secrets.NUNES_BACKEND_HOST }}
+          NUNES_BACKEND_USER: ${{ secrets.NUNES_BACKEND_USER }}
+        run: |
+          set -euo pipefail
+          ssh "$NUNES_BACKEND_USER@$NUNES_BACKEND_HOST" 'sudo bash /tmp/nunes-release/cloud/UPDATE_CLOUD_APP.sh'

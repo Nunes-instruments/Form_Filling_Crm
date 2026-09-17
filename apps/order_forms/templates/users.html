@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block content %}
+<div class="page-head"><div><h1>Users & Roles</h1><p>Department access is enforced by role.</p></div></div>
+<div class="two-col">
+<section class="panel"><h2>Create User</h2><form method="post" class="grid2"><input type="hidden" name="action" value="create">
+<label>Full Name<input name="full_name" required></label><label>Username<input name="username" required></label><label>Password<input type="password" name="password" required minlength="8"></label>
+<label>Role<select name="role">{% for r in roles %}<option>{{r}}</option>{% endfor %}</select></label><div class="span2"><button class="btn primary">Create User</button></div></form></section>
+<section class="panel"><h2>Existing Users</h2><table class="data"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+{% for u in users %}<tr><td>{{u.full_name}}</td><td>{{u.username}}</td><td>{{u.role}}</td><td>{{'Active' if u.active else 'Disabled'}}</td><td>
+<form class="inline" method="post"><input type="hidden" name="action" value="toggle"><input type="hidden" name="user_id" value="{{u.id}}"><button class="mini">{{'Disable' if u.active else 'Enable'}}</button></form>
+<form class="inline pwform" method="post"><input type="hidden" name="action" value="password"><input type="hidden" name="user_id" value="{{u.id}}"><input name="password" type="password" minlength="8" placeholder="New password" required><button class="mini">Change</button></form>
+</td></tr>{% endfor %}</tbody></table></section>
+</div>{% endblock %}

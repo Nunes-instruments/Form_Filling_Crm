@@ -1,0 +1,10 @@
+NUNES STAFF / TAILSCALE ACCESS FIX
+
+Problem fixed:
+The previous Windows Firewall rules allowed only LocalSubnet. Tailscale client addresses are in 100.64.0.0/10, so staff PCs could be blocked even though the server link worked on the main server PC itself.
+
+What changed only:
+1. NUNES firewall rules now allow LocalSubnet + Tailscale 100.64.0.0/10.
+2. Added D_FIX_STAFF_TAILSCALE_ACCESS.bat for a one-click repair on the main server PC.
+
+No business forms, reports, Gmail, WhatsApp, data, or port 8765 behavior was changed by this repair.

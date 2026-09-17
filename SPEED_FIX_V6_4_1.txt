@@ -1,0 +1,40 @@
+NUNES OPERATIONS WORKSPACE V6.4.1 - VERCEL SPEED + OFFLINE RESILIENCE
+=====================================================================
+
+Changes are intentionally limited to loading/data-delivery behavior. Business data formats are unchanged.
+
+1. Vercel no longer runs the local Servicing module prewarmer.
+   - Previous prewarmer could repeatedly call module endpoints while the dashboard was loading.
+   - Local/office prewarming now starts later and polls at a much lower rate.
+
+2. Dashboard live revision polling reduced from every 1.2 seconds to every 6 seconds.
+   - Refreshes immediately when a real data revision changes.
+   - Pauses background checks while the browser tab is hidden.
+
+3. Dashboard opens from the last successful browser snapshot immediately.
+   - Fresh data then replaces it quietly in the background.
+   - If the data server is temporarily unavailable, management can still see the last successful view.
+   - This cache does NOT replace or modify the real Purchasing/Servicing database.
+
+4. New /api/data/dashboard-bootstrap endpoint.
+   - Overview, tasks and revision are collected in parallel behind one browser request.
+   - 1.8-second warm-instance micro-cache prevents duplicate simultaneous reads.
+   - Backend timeout reduced so an unreachable server does not leave the UI hanging for 12 seconds.
+
+5. Notification data is no longer downloaded during first page load.
+   - Alerts load only when the bell is opened.
+
+6. Sidebar/dashboard automatic Next.js route prefetching is disabled for the management landing page.
+   - Prevents Forms/Tasks/Reports/Activity route bundles from competing with the first dashboard paint.
+
+7. Recharts is lazy loaded as a separate browser chunk.
+   - Navigation shell and cached dashboard data can appear before the charting library finishes loading.
+
+8. API errors now include the real backend status/detail.
+   - The screenshot error "Could not load /api/data/tasks" will now explain whether Vercel is missing
+     NUNES_API_INTERNAL_URL / NUNES_DATA_API_TOKEN or whether the persistent company server is unreachable.
+
+IMPORTANT DATA RULE
+-------------------
+No Purchasing SQLite records, Servicing jobs, settings, uploads, or old records are deleted or reset by this update.
+The Vercel frontend still requires the persistent company data service to be configured.

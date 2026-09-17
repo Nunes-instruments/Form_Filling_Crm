@@ -1,0 +1,9 @@
+NUNES V17 - WhatsApp QR Startup Optimization
+
+Speed-only changes:
+- Preserves WhatsApp token/session data.
+- Clears only disposable Chromium caches before WhatsApp launch.
+- Prevents rapid Settings polling from repeatedly relaunching Chrome after a failure.
+- Explicitly disables WPPConnect login waiting and device-sync waiting during QR preparation.
+- Adds lightweight loading telemetry for diagnostics.
+- No UI, form, report, database, Servicing startup or company history changes.

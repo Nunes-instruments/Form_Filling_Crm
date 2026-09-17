@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}NUNES Form Workflow{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">NUNES <span>Form Workflow</span></div>
+  <nav>
+    <a href="{{ url_for('dashboard') }}">Task Board</a>
+    <a href="{{ url_for('orders') }}">Orders</a>
+    <a href="{{ url_for('inbox') }}">Team Inbox{% if unread_notifications %}<b class="badge">{{ unread_notifications }}</b>{% endif %}</a>
+    <a href="{{ url_for('reports') }}">Reports</a>
+    <a href="{{ url_for('integrations') }}">Integrations</a>
+  </nav>
+  <div class="userbox">Shared Office Mode · No Login</div>
+</header>
+<main class="{% block mainclass %}page{% endblock %}">
+  {% with messages=get_flashed_messages(with_categories=true) %}
+    {% for cat,msg in messages %}<div class="flash {{cat}}">{{msg}}</div>{% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+</body></html>

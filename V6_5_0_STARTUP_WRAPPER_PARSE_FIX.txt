@@ -1,0 +1,16 @@
+NUNES COMPANY PLATFORM V6.5.0 - STARTUP WRAPPER PARSE FIX
+=========================================================
+
+Fixed:
+- Removed accidental :WORKSPACE_ERROR / :PYTHON_ERROR label insertion from inside
+  the shared-data ELSE (...) block.
+- Restored the last known-good Python/shared-data startup block.
+- Kept the standalone Next.js dashboard runtime fix.
+- Workspace startup failure now jumps to a clean error label outside all blocks.
+- Dashboard runtime log tail is shown when the workspace itself cannot start.
+- No Purchasing or Servicing data is deleted or reset.
+
+Use:
+1. Extract to a NEW folder.
+2. Run 1_SETUP_ALWAYS_ON_SERVER.bat once on the main server PC.
+3. Double-click the NUNES Operations desktop icon.

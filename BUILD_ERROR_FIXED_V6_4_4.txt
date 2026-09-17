@@ -1,0 +1,26 @@
+NUNES OPERATIONS WORKSPACE V6.4.6 - BUILD ERROR FIX
+===================================================
+
+Error received in V6.4.3:
+  globals.css Unknown word (83:3056)
+
+Cause:
+  The large-text CSS patch was accidentally written with literal characters "\\n"
+  instead of real line breaks. PostCSS therefore rejected the stylesheet.
+
+Fixed in V6.4.6:
+  - Converted the escaped newline sequence into valid CSS lines.
+  - Added tools\\repair-web-source.ps1 to detect/repair this exact issue before build.
+  - Kept the Recharts TypeScript fix from V6.4.3.
+  - Kept the larger dashboard font/readability changes.
+  - Existing Purchasing/Servicing data files are not reset or migrated by this fix.
+  - Vercel deployment script skips an unnecessary npm reinstall when dependencies already exist.
+
+RUN:
+  1. Extract this ZIP to a NEW folder.
+  2. Double-click START_NUNES_COMPANY.bat.
+  3. For Vercel, double-click DEPLOY_TO_EXISTING_VERCEL.bat and link to the EXISTING
+     nunes-operations-workspace project under instruaiglobal-spec.
+
+If the Vercel page still says DATA OFFLINE after a successful deployment, that is a
+separate backend connectivity/environment-variable issue, not a Next.js build failure.

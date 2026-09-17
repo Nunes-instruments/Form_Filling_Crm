@@ -1,0 +1,36 @@
+NUNES OPERATIONS WORKSPACE V6.2
+
+Major platform-shell rebuild based on the approved enterprise specification.
+
+Global navigation:
+- Dashboard
+- Forms
+- Tasks
+- Reports
+- Activity
+- Team
+- Settings
+
+Forms contains only the operational applications:
+- Purchasing
+- Servicing
+
+Purchasing and Servicing remain separate source applications and are not compared or merged.
+
+New V6 capabilities:
+- executive owner dashboard with real saved data
+- separate Purchasing and Servicing analytics
+- work queue with waiting/attention detection from real update timestamps
+- company activity feed
+- people/team activity view based on recorded names
+- universal company search
+- operational notification center
+- centralized report filters + CSV export
+- process detail page with Overview / Workflow / Documents / Messages / History / Report tabs
+- modular application registry for future tools
+- Tailwind CSS 4 + shadcn-style local UI primitives
+- Recharts + Lucide icons
+- responsive desktop/tablet/mobile shell
+
+Important data-integrity rule:
+V6 does not invent employee history that source applications do not store. Purchasing uses its audit log. Servicing exposes its latest saved update and current sign-off fields; a future audit table can be added without changing this platform architecture.

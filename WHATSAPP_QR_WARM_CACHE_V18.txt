@@ -1,0 +1,20 @@
+NUNES V18 - WHATSAPP QR WARM CACHE SPEED FIX
+
+Scope: WhatsApp QR startup speed only.
+
+Changes:
+- Preserve WhatsApp Web Chrome Cache, Code Cache and Service Worker cache between starts.
+- Remove only stale Chromium singleton lock files.
+- Remove the 1-byte Chrome disk/media cache restriction.
+- Start the prepared WhatsApp resident before waiting on the HTTP status endpoint.
+- Reduce the cold-sidecar detection timeout so Settings does not spend ~1 second waiting before launch.
+- Avoid duplicate initialization calls when Settings mounts.
+- Stop only orphaned Chrome/Edge processes using the dedicated ServiceFlow WhatsApp profile.
+
+Preserved:
+- WhatsApp login/session/tokens
+- Purchasing/Servicing history
+- Reports/attachments/data
+- UI/UX
+- Servicing startup logic
+- Dashboard and other workflows

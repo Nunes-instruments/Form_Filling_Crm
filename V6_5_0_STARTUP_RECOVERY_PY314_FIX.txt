@@ -1,0 +1,28 @@
+NUNES OPERATIONS V6.5.0 - STARTUP RECOVERY / PYTHON 3.14 FIX
+================================================================
+
+What was fixed
+--------------
+1. Python 3.14 is now accepted and discovered (including C:\Python314\python.exe).
+   The previous launcher accepted only Python 3.10-3.13, which could cause an
+   unnecessary Python installation attempt and leave the server offline.
+2. Old scheduled-task instances are stopped during one-time setup before the
+   updated tasks are registered. This prevents an older hidden PAUSE/error
+   process from blocking every later start through MultipleInstances=IgnoreNew.
+3. The desktop launcher now shows the real startup stage instead of only dots.
+4. Startup waits while genuine first-time preparation is progressing and shows
+   the latest server log if a real error occurs.
+5. If Task Scheduler exits before the dashboard is ready, the launcher performs
+   one direct recovery start automatically.
+6. The current server-startup.log is refreshed for every server start and now
+   contains dashboard runtime/build errors instead of suppressing them.
+7. Servicing uses its hot cache immediately when available. If a first-time
+   Servicing npm install/build is needed, it is deferred until the main dashboard
+   is live so two heavy builds do not compete during startup.
+8. Purchasing and Servicing persistent data locations are unchanged.
+
+Use
+---
+On the MAIN 24-hour server PC run 1_SETUP_ALWAYS_ON_SERVER.bat once from this
+new extracted folder and choose Yes. Then use the NUNES Operations desktop icon.
+Other PCs still use 3_CONNECT_THIS_PC_TO_SHARED_SERVER.bat once, then the icon.

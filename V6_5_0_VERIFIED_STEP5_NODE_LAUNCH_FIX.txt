@@ -1,0 +1,21 @@
+NUNES OPERATIONS V6.5.0 - VERIFIED STEP-5 NODE LAUNCH FIX
+=========================================================
+Why this build exists:
+The server reached Steps 1-4 and produced a valid READY build hash, but Step 5
+reported "NUNES workspace did not start" while "Dashboard runtime details" was
+blank. A blank runtime log shows the dashboard BAT wrapper was not reliably
+launching the Next.js process.
+
+What changed:
+- Step 5 no longer uses nested: start -> cmd /c -> call RUN_PLATFORM.bat.
+- It launches through tools/start-dashboard.cjs using the exact Node executable
+  already prepared in Step 1.
+- Existing standalone build is reused, so the successful cached build does not
+  need to be discarded or rebuilt just for this launcher fix.
+- If standalone is unavailable, the launcher can fall back to normal next start.
+- Current-run logs are always written to:
+    %LOCALAPPDATA%\NUNES Operations\dashboard-launcher.log
+    %LOCALAPPDATA%\NUNES Operations\dashboard-stdout.log
+    %LOCALAPPDATA%\NUNES Operations\dashboard-stderr.log
+- Step 5 waits up to 45 seconds for the health endpoint after the process exists.
+- Purchasing and Servicing data are not deleted or reset.

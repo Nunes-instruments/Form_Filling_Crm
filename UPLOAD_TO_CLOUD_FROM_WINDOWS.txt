@@ -1,0 +1,19 @@
+UPLOAD FROM A WINDOWS PC
+========================
+
+Windows 10/11 normally includes OpenSSH.
+Open PowerShell in the folder containing the ZIP.
+
+1. Upload:
+   scp NUNES_COMPANY_CLOUD_V4_0_24X7.zip ubuntu@YOUR_CLOUD_PUBLIC_IP:/home/ubuntu/
+
+2. Connect:
+   ssh ubuntu@YOUR_CLOUD_PUBLIC_IP
+
+3. On the cloud VM:
+   sudo apt-get update && sudo apt-get install -y unzip
+   unzip NUNES_COMPANY_CLOUD_V4_0_24X7.zip
+   cd NUNES_COMPANY_CLOUD_V4_0_24X7
+   sudo bash cloud/INSTALL_CLOUD_SERVER.sh
+
+After installation, your Windows PC can be switched off.

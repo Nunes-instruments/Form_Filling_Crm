@@ -1,0 +1,11 @@
+node_modules/
+.next/
+data/jobs.json
+data/settings.json
+data/google-token.json
+data/uploads/
+logs/*.log
+config/google-oauth-client.json
+
+.env.local
+.env*.local

@@ -1,0 +1,19 @@
+SERVICEFLOW V1.1.30 - EMAIL + WHATSAPP SETUP
+
+EMAIL (GOOGLE OAUTH)
+1. Enable Gmail API in Google Cloud.
+2. Create a Desktop app OAuth client and download the JSON.
+3. Open ServiceFlow -> Settings -> Google Gmail Connection.
+4. Upload the OAuth client JSON.
+5. Click Sign in with Google and select the sender Gmail account.
+6. After Google returns to ServiceFlow, the connected Gmail address is shown.
+
+No Gmail App Password and no SMTP password are used.
+
+WHATSAPP
+1. Open ServiceFlow -> Settings -> WhatsApp Web Login.
+2. Scan the QR with WhatsApp -> Linked devices -> Link a device.
+3. The status changes to Connected.
+4. Save & Preview sends automatically when the customer number is available.
+
+Email and WhatsApp are independent; failure or absence of one channel does not block saving or the other channel.
