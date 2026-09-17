@@ -10,7 +10,7 @@ $configPath = Join-Path $residentDir 'servicing-resident.json'
 $readyStamp = Join-Path $residentDir 'ready.stamp'
 $startLock = Join-Path $residentDir 'starting.lock'
 
-function Test-ServiceReady([int]$TimeoutMs = 180) {
+function Test-ServiceReady([int]$TimeoutMs = 180, [string]$ExpectedSignature = '') {
   try {
     $req = [System.Net.HttpWebRequest]::Create("http://127.0.0.1:$Port/api/health")
     $req.Method = 'GET'
@@ -22,7 +22,13 @@ function Test-ServiceReady([int]$TimeoutMs = 180) {
       $reader = New-Object IO.StreamReader($resp.GetResponseStream())
       $raw = $reader.ReadToEnd()
       $payload = $raw | ConvertFrom-Json
-      return ($payload.app -eq 'ServiceFlowJobCards' -and $payload.ok -eq $true)
+      if (-not ($payload.app -eq 'ServiceFlowJobCards' -and $payload.ok -eq $true)) { return $false }
+      if (-not [string]::IsNullOrWhiteSpace($ExpectedSignature)) {
+        $actual = ''
+        try { $actual = [string]$payload.source_signature } catch {}
+        if (-not [string]::IsNullOrWhiteSpace($actual)) { return ($actual -eq $ExpectedSignature) }
+      }
+      return $true
     } finally { $resp.Close() }
   } catch { return $false }
 }
@@ -39,14 +45,16 @@ function Warm-ServiceForm {
   } catch {}
 }
 
-if (Test-ServiceReady 120) {
+if (-not (Test-Path -LiteralPath $configPath)) { exit 3 }
+$config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+$expectedSignature = ''
+try { $expectedSignature = [string]$config.sourceSignature } catch {}
+if (Test-ServiceReady 120 $expectedSignature) {
   Warm-ServiceForm
   Set-Content -LiteralPath $readyStamp -Value ([DateTime]::UtcNow.ToString('o')) -Encoding ASCII -ErrorAction SilentlyContinue
   exit 0
 }
-if (-not (Test-Path -LiteralPath $configPath)) { exit 3 }
 
-$config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
 $runtimeApp = [string]$config.runtimeApp
 $nodeExe = [string]$config.nodeExe
 if ([string]::IsNullOrWhiteSpace($runtimeApp) -or -not (Test-Path -LiteralPath $runtimeApp -PathType Container)) { exit 3 }
@@ -64,7 +72,7 @@ $hasMutex = $false
 try {
   try { $hasMutex = $mutex.WaitOne(0) } catch [System.Threading.AbandonedMutexException] { $hasMutex = $true }
   if (-not $hasMutex) { exit 0 }
-  if (Test-ServiceReady 120) { Warm-ServiceForm; exit 0 }
+  if (Test-ServiceReady 120 $expectedSignature) { Warm-ServiceForm; exit 0 }
 
   New-Item -ItemType Directory -Force -Path $residentDir | Out-Null
   Set-Content -LiteralPath $startLock -Value ([DateTime]::UtcNow.ToString('o')) -Encoding ASCII -ErrorAction SilentlyContinue
@@ -87,6 +95,7 @@ try {
   $psi.EnvironmentVariables['NODE_ENV'] = 'production'
   $psi.EnvironmentVariables['HOSTNAME'] = '0.0.0.0'
   $psi.EnvironmentVariables['PORT'] = [string]$Port
+  if (-not [string]::IsNullOrWhiteSpace($expectedSignature)) { $psi.EnvironmentVariables['NUNES_SOURCE_SIGNATURE'] = $expectedSignature }
   $p = [System.Diagnostics.Process]::Start($psi)
   try { $p.PriorityClass = [System.Diagnostics.ProcessPriorityClass]::AboveNormal } catch {}
   if ($null -eq $p) { exit 4 }
@@ -95,7 +104,7 @@ try {
   # 80 ms intervals so the route is warmed immediately instead of waiting on 1-second timers.
   $deadline = [DateTime]::UtcNow.AddSeconds(8)
   while ([DateTime]::UtcNow -lt $deadline) {
-    if (Test-ServiceReady 150) {
+    if (Test-ServiceReady 150 $expectedSignature) {
       Warm-ServiceForm
       Set-Content -LiteralPath $readyStamp -Value ([DateTime]::UtcNow.ToString('o')) -Encoding ASCII -ErrorAction SilentlyContinue
       Remove-Item -LiteralPath $startLock -Force -ErrorAction SilentlyContinue

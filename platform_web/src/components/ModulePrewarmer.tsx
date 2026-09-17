@@ -58,10 +58,10 @@ export default function ModulePrewarmer(){
           return;
         }
         if(i===8||i===24)void start();
-        await new Promise(r=>setTimeout(r,i<20?200:600));
+        await new Promise(r=>setTimeout(r,i<20?100:400));
       }
     };
-    const id=window.setTimeout(()=>void warm(),20);
+    const id=window.setTimeout(()=>void warm(),0);
     return()=>{dead=true;window.clearTimeout(id);if(heartbeat!==undefined)window.clearInterval(heartbeat)};
   },[]);
   return preloadUrl?<iframe key={nonce} aria-hidden="true" tabIndex={-1} title="Servicing route preloader" src={preloadUrl} style={{position:"fixed",right:0,bottom:0,width:1,height:1,opacity:0,pointerEvents:"none",border:0}}/>:null;

@@ -1,0 +1,11 @@
+NUNES Operations V6.5.9 - Servicing <=1 second target
+
+Speed-only changes:
+- Fixed Servicing module readiness bug caused by mismatched human VERSION.txt text vs health API version.
+- Health now exposes source_signature for exact resident/source matching.
+- Servicing iframe starts loading immediately behind the readiness overlay instead of waiting for a second status round-trip.
+- Dashboard readiness polling and browser prewarm are faster.
+- Existing standalone resident/keepalive remains always-on on the main server.
+- Gmail, WhatsApp, purchasing workflow, service fields, reports and persistent company data are unchanged.
+
+Use L_CHECK_1_SECOND_SERVICING.bat on the main server to measure /api/health and /jobs/new response time.

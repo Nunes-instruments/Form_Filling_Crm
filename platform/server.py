@@ -223,19 +223,26 @@ def module_probe(key: str, timeout: float = 0.22) -> tuple[str, dict]:
             expected = _module_instance_id(mod)
             actual = text(payload.get("instance_id"))
             if key == "service_operations":
-                # V6.4.2+: Servicing data lives in one persistent shared data directory.
-                # Therefore an already-running compatible ServiceFlow from another extracted
-                # V6 package is safe to reuse and should NOT be restarted merely because its
-                # folder-path instance id differs. This removes the repeated cold-start delay.
-                recognized = text(payload.get("app")) == "ServiceFlowJobCards"
-                expected_version_path = ROOT_DIR / mod["app_dir"] / "VERSION.txt"
-                try:
-                    expected_version = expected_version_path.read_text(encoding="utf-8").strip() or "1.1.31"
-                except Exception:
-                    expected_version = "1.1.31"
+                # V6.5.9 ULTRA-FAST readiness: compare the source signature when the
+                # resident exposes it. This avoids the old brittle VERSION.txt text
+                # comparison which could mark a healthy ServiceFlow as permanently stale
+                # (and made the Forms card sit on "Preparing in background").
+                recognized = text(payload.get("app")) == "ServiceFlowJobCards" and bool(payload.get("ok"))
                 if not recognized:
                     return "foreign", payload
-                return ("ready" if text(payload.get("version")) == expected_version else "stale"), payload
+                expected_sig = ""
+                try:
+                    expected_sig = (ROOT_DIR / mod["app_dir"] / "SOURCE_SIGNATURE.txt").read_text(encoding="utf-8").strip()
+                except Exception:
+                    pass
+                actual_sig = text(payload.get("source_signature"))
+                if expected_sig and actual_sig:
+                    return ("ready" if hmac.compare_digest(actual_sig, expected_sig) else "stale"), payload
+                # Legacy resident fallback. A recognized ServiceFlow without a signature
+                # is allowed to stay usable; the normal server update path explicitly
+                # rebuilds/restarts Servicing when source changes. This keeps clicks fast
+                # even while upgrading older resident installations.
+                return "ready", payload
             else:
                 recognized = bool(payload.get("ok")) and ("time" in payload or text(payload.get("app")) == "NunesPurchasingForms" or bool(actual))
                 if not recognized:

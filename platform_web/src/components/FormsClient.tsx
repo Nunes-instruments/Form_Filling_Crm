@@ -11,7 +11,7 @@ export default function FormsClient(){
   let alive=true; let timer:number|undefined;
   // Status is intentionally loaded independently from report/task data. A slower
   // report query must never make a ready Servicing engine look like it is starting.
-  const refreshModules=async()=>{try{clearDataCache("/api/data/modules");const m=await getModules();if(!alive)return;setModules(m);for(const k of ["service_operations","order_forms"]){const x=m?.[k];if(x?.ready||x?.public_url){const u=moduleUrl(x);if(u)sessionStorage.setItem(`nunes:module-url:${k}`,u)}}const allReady=Boolean(m?.service_operations?.ready&&m?.order_forms?.ready);if(!allReady)timer=window.setTimeout(refreshModules,500)}catch{if(alive)timer=window.setTimeout(refreshModules,700)}};
+  const refreshModules=async()=>{try{clearDataCache("/api/data/modules");const m=await getModules();if(!alive)return;setModules(m);for(const k of ["service_operations","order_forms"]){const x=m?.[k];if(x?.ready||x?.public_url){const u=moduleUrl(x);if(u)sessionStorage.setItem(`nunes:module-url:${k}`,u)}}const allReady=Boolean(m?.service_operations?.ready&&m?.order_forms?.ready);if(!allReady)timer=window.setTimeout(refreshModules,220)}catch{if(alive)timer=window.setTimeout(refreshModules,350)}};
   // Idempotent warm requests. In V6.4.6 Servicing is already started before the
   // workspace becomes visible, so this is only a repair fallback.
   companyFetch("/api/data/modules/service_operations/start",{method:"POST",cache:"no-store"}).catch(()=>{});
