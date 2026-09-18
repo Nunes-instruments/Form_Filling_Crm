@@ -36,7 +36,6 @@ let loginBrowserOpen = false;
 let manualShutdown = false;
 let generation = 0;
 let visibleClientStarting = false;
-let transportReady = false; // NUNES_V6610_AUTH_FAST_COMPLETE_FILE
 
 function mark(next, error = '') {
   state = next;
@@ -96,7 +95,6 @@ async function destroyClient() {
   const current = client;
   client = null;
   visibleClientStarting = false;
-  transportReady = false;
   if (!current) return;
   try { await current.destroy(); } catch (_) {}
 }
@@ -108,7 +106,6 @@ async function destroyClientFast() {
   const current = client;
   client = null;
   visibleClientStarting = false;
-  transportReady = false;
   if (!current) return;
   try {
     const proc = current?.pupBrowser?.process?.();
@@ -236,32 +233,12 @@ async function ensureClient(visibleLogin = false, force = false) {
 
     nextClient.on('authenticated', () => {
       if (currentGeneration !== generation) return;
-      // V6.6.10 WhatsApp-only fast-auth behavior: the phone/QR link is already
-      // accepted here. Do not keep Settings waiting for whatsapp-web.js to finish
-      // its internal sender injection. The first send waits safely for that later
-      // transport-ready event in the background.
-      transportReady = false;
-      loginBrowserOpen = false;
-      loadingMessage = 'WhatsApp linked. Sender is warming in the background';
-      mark('READY');
-      void writeLinkedMarker().catch(() => {});
-
-      if (visibleLogin) {
-        void (async () => {
-          try {
-            const cdp = await nextClient.pupPage.target().createCDPSession();
-            try {
-              const { windowId } = await cdp.send('Browser.getWindowForTarget');
-              await cdp.send('Browser.setWindowBounds', { windowId, bounds: { windowState: 'minimized' } });
-            } finally { await cdp.detach(); }
-          } catch (_) {}
-        })();
-      }
+      loadingMessage = 'WhatsApp authenticated';
+      mark('AUTHENTICATED');
     });
 
     nextClient.on('ready', async () => {
       if (currentGeneration !== generation) return;
-      transportReady = true;
       connectedNumber = String(nextClient.info?.wid?.user || '').replace(/\D/g, '');
       loadingMessage = 'WhatsApp connected';
       mark('READY');
@@ -363,7 +340,6 @@ function statusPayload() {
     connectedNumber,
     lastError,
     lastStateAt,
-    sendReady: transportReady,
     runtimeInstalling: false
   };
 }
@@ -392,16 +368,6 @@ function readJson(req) {
   });
 }
 
-async function waitForTransportReady(maxMs = 30000) {
-  const deadline = Date.now() + Math.max(1000, maxMs);
-  while (Date.now() < deadline) {
-    if (client && transportReady) return true;
-    if (['LOGIN_REQUIRED','DISCONNECTED','ERROR'].includes(state)) return false;
-    await new Promise(resolve => setTimeout(resolve, 120));
-  }
-  return Boolean(client && transportReady);
-}
-
 async function sendCustomerMessage(body) {
   const digits = String(body.phoneDigits || '').replace(/\D/g, '');
   const message = String(body.message || '');
@@ -410,12 +376,6 @@ async function sendCustomerMessage(body) {
   await ensureClient(false);
   if (!client || state !== 'READY') {
     return { status: 'LOGIN_REQUIRED', detail: lastError || 'WhatsApp Web is not linked. Open Settings → WhatsApp Web Login once on the main-server PC.' };
-  }
-  if (!transportReady) {
-    const becameReady = await waitForTransportReady(30000);
-    if (!becameReady) {
-      return { status: 'FAILED', detail: 'WhatsApp is linked, but the sender is still preparing. Please retry in a few seconds.' };
-    }
   }
 
   const numberId = await client.getNumberId(digits);
@@ -451,7 +411,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/health') {
       return sendJson(res, 200, {
         service: 'ServiceFlow WhatsApp Runtime', engine: ENGINE, version: VERSION,
-        ok: !runtimeError, state, ready: transportReady, loginRequired: ['NOT_STARTED','LOGIN_REQUIRED','DISCONNECTED','ERROR'].includes(state), runtimeError
+        ok: !runtimeError, state, ready: state === 'READY', loginRequired: ['NOT_STARTED','LOGIN_REQUIRED','DISCONNECTED','ERROR'].includes(state), runtimeError
       });
     }
     if (req.method === 'GET' && url.pathname === '/status') {
