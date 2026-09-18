@@ -1,78 +1,369 @@
-﻿"use client";
-import { useEffect,useMemo,useRef,useState } from "react";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
-import { Activity,AlertTriangle,ArrowRight,CalendarDays,CheckCircle2,Clock3,Eye,FileText,IndianRupee,Layers3,TrendingUp,Wrench } from "lucide-react";
-import { companyFetch,compactMoney,connectLocalDataBridge,dateText,getActivity,getDashboardBootstrap,getRevision,readDashboardSnapshot,relativeTime,writeDashboardSnapshot } from "@/lib/data";
-import type { ActivityPayload,Overview,TasksPayload } from "@/lib/types";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CalendarDays,
+  Eye,
+  FileText,
+  RefreshCw,
+  ShoppingCart,
+  Wrench,
+} from "lucide-react";
+import {
+  companyFetch,
+  connectLocalDataBridge,
+  dateText,
+  getDashboardBootstrap,
+  getRevision,
+  readDashboardSnapshot,
+  writeDashboardSnapshot,
+} from "@/lib/data";
+import type { Overview } from "@/lib/types";
 import ReportModal from "./ReportModal";
 
-const FormsOverviewChart=dynamic(()=>import("./DashboardCharts").then(m=>m.FormsOverviewChart),{ssr:false,loading:()=> <div className="chart-loading">Loading chartâ€¦</div>});
-const CombinedStatusChart=dynamic(()=>import("./DashboardCharts").then(m=>m.CombinedStatusChart),{ssr:false,loading:()=> <div className="chart-loading">Loading chartâ€¦</div>});
-const COLORS=["#1677FF","#10B981","#F59E0B","#22C55E","#94A3B8","#8B5CF6","#06B6D4","#EF4444"];
-function semanticStatusColor(name:string,index=0){const n=String(name||"").toLowerCase();if(n.includes("cancel")||n.includes("draft"))return "#94A3B8";if(n.includes("error")||n.includes("failed"))return "#EF4444";if(n.includes("completed")||n.includes("closed")||n.includes("dispatched")||n.includes("ready"))return "#22C55E";if(n.includes("pending")||n.includes("waiting")||n.includes("approval")||n.includes("estimate"))return "#F59E0B";if(n.includes("progress")||n.includes("repair")||n.includes("received"))return "#3B82F6";return COLORS[index%COLORS.length]}
-function semanticStatusClass(name:string){const n=String(name||"").toLowerCase();if(n.includes("completed")||n.includes("closed")||n.includes("dispatched")||n.includes("ready"))return "done";if(n.includes("pending")||n.includes("waiting")||n.includes("approval")||n.includes("estimate"))return "pending";if(n.includes("progress")||n.includes("repair")||n.includes("received"))return "progress";if(n.includes("cancel")||n.includes("draft"))return "neutral";return "progress"}
-function SourceBadge({source}:{source:string}){return <span className={`source-badge ${source}`}>{source==="purchasing"?"Purchasing":"Servicing"}</span>}
-function EmptyGraph({text}:{text:string}){return <div className="dash-empty"><TrendingUp/><b>No activity yet</b><span>{text}</span></div>}
-function Kpi({icon:Icon,label,value,sub,tone="blue"}:{icon:any,label:string,value:any,sub:string,tone?:string}){return <article className={`dash-kpi ${tone}`}><div className="dash-kpi-top"><span className="dash-kpi-icon"><Icon/></span><span className="dash-kpi-label">{label}</span></div><strong>{value}</strong><small>{sub}</small></article>}
-function PeriodTile({label,total,purchasing,servicing,icon:Icon}:{label:string,total:number,purchasing:number,servicing:number,icon:any}){return <div className="period-tile"><span className="period-icon"><Icon/></span><div><small>{label}</small><strong>{total}</strong><p><span className="p-dot"/> {purchasing} Purchasing <span className="s-dot"/> {servicing} Servicing</p></div></div>}
-
-export default function DashboardClient(){
- const [overview,setOverview]=useState<Overview|null>(null);const [tasks,setTasks]=useState<TasksPayload|null>(null);const [activity,setActivity]=useState<ActivityPayload|null>(null);const [detail,setDetail]=useState<any>(null);const [detailLoading,setDetailLoading]=useState("");const [error,setError]=useState("");const [warning,setWarning]=useState("");const [connecting,setConnecting]=useState(false);const [period,setPeriod]=useState<"daily"|"monthly">("daily");
- const loadingRef=useRef(false);const revisionRef=useRef("");const lastLoadRef=useRef(0);
- const load=async(force=false)=>{if(loadingRef.current)return;if(!force&&Date.now()-lastLoadRef.current<2500)return;loadingRef.current=true;try{setError("");const data=await getDashboardBootstrap(force);setOverview(data.overview);setTasks(data.tasks);if(data.revision)revisionRef.current=data.revision;if(data.offline){setWarning(data.data_mode==="saved-view"?"Live data is not connected. Showing the last saved dashboard from this browser.":"Live company data is not connected yet. On this PC, run START_VERCEL_DATA_BRIDGE.bat; or configure a cloud data URL in Vercel.")}else{setWarning("");writeDashboardSnapshot(data.overview,data.tasks,data.revision)}lastLoadRef.current=Date.now()}catch(e){setError(String(e))}finally{loadingRef.current=false}};
- const openReport=async(source:"purchasing"|"servicing",id:any)=>{try{setDetailLoading(`${source}-${id}`);const r=await companyFetch(`/api/data/reports/${source}/${encodeURIComponent(String(id))}`,{cache:"no-store"});const d=await r.json();if(!r.ok||!d.available)throw new Error(d.error||"Report output could not be loaded");setDetail(d)}catch(e){setError(String(e))}finally{setDetailLoading("")}};
- const connectThisPc=async()=>{if(connecting)return;setConnecting(true);setError("");setWarning("Connecting to the NUNES data bridge on this PC. If Chrome asks for local network access, choose Allow.");try{const result=await connectLocalDataBridge();if(result.ok){setWarning("");await load(true);return}setWarning("Chrome is blocking access to this PC. Click the site controls icon beside the address bar, set Local network access to Allow, then click Connect this PC again.")}catch{setWarning("Could not connect to the data bridge on this PC. Keep START_VERCEL_DATA_BRIDGE.bat running, allow Local network access in Chrome, and try again.")}finally{setConnecting(false)}};
- useEffect(()=>{let stopped=false;const snap=readDashboardSnapshot();if(snap){setOverview(snap.overview);setTasks(snap.tasks);if(snap.revision)revisionRef.current=snap.revision}load(true);const activityTimer=window.setTimeout(()=>getActivity().then(setActivity).catch(()=>{}),450);const watch=async()=>{if(stopped||document.visibilityState!=="visible"||(!revisionRef.current&&!lastLoadRef.current))return;try{const r=await getRevision();if(stopped)return;if(!revisionRef.current){revisionRef.current=r.revision;return}if(r.revision!==revisionRef.current){revisionRef.current=r.revision;await load(true)}}catch{}};const timer=window.setInterval(watch,6000);const focus=()=>{if(Date.now()-lastLoadRef.current>8000)load(true)};const visibility=()=>{if(document.visibilityState==="visible"&&Date.now()-lastLoadRef.current>8000)load(true)};window.addEventListener("focus",focus);document.addEventListener("visibilitychange",visibility);return()=>{stopped=true;window.clearInterval(timer);window.clearTimeout(activityTimer);window.removeEventListener("focus",focus);document.removeEventListener("visibilitychange",visibility)}},[]);
- const attention=useMemo(()=>[...(tasks?.purchasing||[]),...(tasks?.servicing||[])].filter(x=>x.needs_attention).sort((a,b)=>b.waiting_hours-a.waiting_hours).slice(0,5),[tasks]);
- if(error&&!overview&&!tasks)return <main className="page"><div className="error-state"><AlertTriangle/><div><b>Management dashboard could not load live records.</b><span>{error}</span><button className="btn primary" onClick={()=>load(true)}>Retry</button></div></div></main>;
- if(!overview||!tasks)return <main className="page"><div className="center"><div><div className="spinner"/><b>Opening company dashboardâ€¦</b><p>Loading the latest saved view.</p></div></div></main>;
- const f=overview.forms||{},s=overview.service||{};const active=tasks.summary.active||0,waiting=tasks.summary.waiting||0,needs=tasks.summary.needs_attention||0,completedToday=tasks.summary.completed_today||0;
- const totalValue=Number(f.order_value||0)+Number(s.total_estimate||0);const fStatuses=Object.entries(f.statuses||{}).map(([name,value])=>({name,value:Number(value)}));const sStatuses=Object.entries(s.statuses||{}).map(([name,value])=>({name,value:Number(value)}));
- const dayMap=new Map<string,{key:string,label:string,purchasing:number,servicing:number,total:number}>();for(const x of (f.daily||[])){const key=String(x.key||x.label||"");if(key)dayMap.set(key,{key,label:String(x.label||key),purchasing:Number(x.forms||0),servicing:0,total:Number(x.forms||0)})}for(const x of (s.daily||[])){const key=String(x.key||x.label||"");if(!key)continue;const row=dayMap.get(key)||{key,label:String(x.label||key),purchasing:0,servicing:0,total:0};row.servicing=Number(x.forms||0);row.total=row.purchasing+row.servicing;dayMap.set(key,row)}
- const daywiseForms=Array.from(dayMap.values()).sort((a,b)=>b.key.localeCompare(a.key)).slice(0,14);const weeklyRows=daywiseForms.slice(0,7);const weekPurchase=weeklyRows.reduce((n,x)=>n+x.purchasing,0);const weekService=weeklyRows.reduce((n,x)=>n+x.servicing,0);
- const monthMap=new Map<string,{key:string,label:string,purchasing:number,servicing:number,total:number}>();for(const x of (f.monthly||[])){const key=String(x.key||x.label||"");if(key)monthMap.set(key,{key,label:String(x.label||key),purchasing:Number(x.orders||0),servicing:0,total:Number(x.orders||0)})}for(const x of (s.monthly||[])){const key=String(x.key||x.label||"");if(!key)continue;const row=monthMap.get(key)||{key,label:String(x.label||key),purchasing:0,servicing:0,total:0};row.servicing=Number(x.jobs||0);row.total=row.purchasing+row.servicing;monthMap.set(key,row)}const monthlyForms=Array.from(monthMap.values()).sort((a,b)=>a.key.localeCompare(b.key));const formsChartData=period==="daily"?[...daywiseForms].sort((a,b)=>a.key.localeCompare(b.key)):monthlyForms;
- const statusMap=new Map<string,number>();for(const x of fStatuses)statusMap.set(String(x.name),Number(x.value||0)+(statusMap.get(String(x.name))||0));for(const x of sStatuses)statusMap.set(String(x.name),Number(x.value||0)+(statusMap.get(String(x.name))||0));const combinedStatuses=Array.from(statusMap.entries()).map(([name,value],i)=>({name,value,color:semanticStatusColor(name,i)})).filter(x=>x.value>0).sort((a,b)=>b.value-a.value);const statusTotal=combinedStatuses.reduce((sum,x)=>sum+x.value,0);
- const recentForms=[...(f.recent||[]).slice(0,7).map((r:any)=>({source:"purchasing" as const,id:r.id,reference:r.order_id,customer:r.customer,detail:r.products||`${r.item_count||0} item(s)`,status:r.status,updated_at:r.updated_at})),...(s.recent||[]).slice(0,7).map((r:any)=>({source:"servicing" as const,id:r.id,reference:r.job_no,customer:r.customer,detail:r.product||r.problem||"Service job",status:r.status,updated_at:r.updated_at}))].sort((a,b)=>String(b.updated_at||"").localeCompare(String(a.updated_at||""))).slice(0,7);
- const now=new Date();
- return <main className="page dashboard-page-v2">
-  {warning&&<div className="output-error connection-warning"><AlertTriangle/><div><b>Company data connection needs attention</b><span>{warning}</span></div><div className="connection-actions"><button className="btn primary" onClick={connectThisPc} disabled={connecting}>{connecting?"Connectingâ€¦":"Connect this PC"}</button><button className="btn" onClick={()=>load(true)}>Retry</button></div></div>}
-  {error&&<div className="output-error"><AlertTriangle/><div><b>Live data is temporarily unavailable</b><span>Showing the last successful view. {error}</span></div><button className="btn" onClick={()=>load(true)}>Retry</button></div>}
-
-  <section className="dash-welcome">
-   <div><span className="dash-eyebrow">NUNES Operations Workspace</span><h1>Dashboard</h1><p>Live Purchasing and Servicing overview Â· {now.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</p></div>
-   <div className="dash-welcome-actions"><Link href="/forms" className="btn primary"><FileText/>Open forms</Link><Link href="/tasks" className="btn"><Clock3/>Work queue</Link></div>
-  </section>
-
-  <section className="dash-kpi-grid-v2">
-   <Kpi icon={FileText} label="Forms Today" value={Number(f.today_forms||0)+Number(s.today_forms||0)} sub={`${f.today_forms||0} Purchasing Â· ${s.today_forms||0} Servicing`} tone="blue"/>
-   <Kpi icon={Layers3} label="Active Processes" value={active} sub={`${f.active_orders||0} Purchasing Â· ${s.open_jobs||0} Servicing`} tone="violet"/>
-   <Kpi icon={AlertTriangle} label="Needs Attention" value={needs} sub={`${waiting} waiting for action`} tone="amber"/>
-   <Kpi icon={IndianRupee} label="Process Value" value={compactMoney(totalValue)} sub="Purchasing value + service estimate" tone="green"/>
-  </section>
-
-  <section className="period-strip">
-   <PeriodTile icon={Clock3} label="Today" total={Number(f.today_forms||0)+Number(s.today_forms||0)} purchasing={Number(f.today_forms||0)} servicing={Number(s.today_forms||0)}/>
-   <PeriodTile icon={CalendarDays} label="Last 7 days" total={weekPurchase+weekService} purchasing={weekPurchase} servicing={weekService}/>
-   <PeriodTile icon={TrendingUp} label="This month" total={Number(f.this_month_forms||0)+Number(s.this_month_forms||0)} purchasing={Number(f.this_month_forms||0)} servicing={Number(s.this_month_forms||0)}/>
-   <div className="period-tile completion"><span className="period-icon"><CheckCircle2/></span><div><small>Completed today</small><strong>{completedToday}</strong><p>Latest saved completion activity</p></div></div>
-  </section>
-
-  <section className="dash-grid-main">
-   <article className="dash-card dash-chart-card"><div className="dash-card-head"><div><span>Forms overview</span><h2>Purchasing vs Servicing</h2><p>Real saved form counts. No duplicate dashboard records.</p></div><div className="period-control"><button className={period==="daily"?"active":""} onClick={()=>setPeriod("daily")}>14 Days</button><button className={period==="monthly"?"active":""} onClick={()=>setPeriod("monthly")}>6 Months</button></div></div><div className="chart-legend"><span><i className="purchase-dot"/>Purchasing</span><span><i className="service-dot"/>Servicing</span></div><div className="dash-chart-area">{formsChartData.some(x=>x.total>0)?<FormsOverviewChart data={formsChartData}/>:<EmptyGraph text="The chart will appear automatically when forms are saved."/>}</div></article>
-   <article className="dash-card dash-status-card"><div className="dash-card-head"><div><span>Status overview</span><h2>Current workload</h2><p>Existing statuses across both forms.</p></div></div>{combinedStatuses.length?<><div className="dash-donut-wrap"><div className="dash-donut"><CombinedStatusChart data={combinedStatuses}/></div><div className="dash-donut-center"><strong>{statusTotal}</strong><span>Total</span></div></div><div className="dash-status-list">{combinedStatuses.slice(0,6).map(x=>{const pct=statusTotal>0?Math.max(7,Math.round((x.value/statusTotal)*100)):0;return <div className="dash-status-item" key={x.name}><div className="dash-status-line"><span><i style={{background:x.color}}/>{String(x.name).replaceAll("_"," ")}</span><b>{x.value}</b></div><div className="dash-status-track"><span style={{width:`${pct}%`,background:x.color}}/></div></div>})}</div></>:<EmptyGraph text="Status distribution will appear with saved forms."/>}</article>
-  </section>
-
-  <section className="dash-module-row">
-   <article className="module-snapshot purchasing"><div className="module-snapshot-head"><span className="module-snapshot-icon"><FileText/></span><div><small>Purchasing</small><h3>Purchasing activity</h3></div><Link href="/reports?type=purchasing">Reports <ArrowRight/></Link></div><div className="module-snapshot-stats"><div><span>Today</span><b>{f.today_forms||0}</b></div><div><span>Active</span><b>{f.active_orders||0}</b></div><div><span>Completed</span><b>{f.completed_orders||0}</b></div><div><span>Order value</span><b>{compactMoney(f.order_value)}</b></div></div></article>
-   <article className="module-snapshot servicing"><div className="module-snapshot-head"><span className="module-snapshot-icon"><Wrench/></span><div><small>Servicing</small><h3>Service activity</h3></div><Link href="/reports?type=servicing">Reports <ArrowRight/></Link></div><div className="module-snapshot-stats"><div><span>Today</span><b>{s.today_forms||0}</b></div><div><span>Open</span><b>{s.open_jobs||0}</b></div><div><span>Ready</span><b>{s.ready||0}</b></div><div><span>Estimate</span><b>{compactMoney(s.total_estimate)}</b></div></div></article>
-  </section>
-
-  <section className="dash-grid-secondary">
-   <article className="dash-card recent-card"><div className="dash-card-head"><div><span>Live form output</span><h2>Recent forms</h2><p>Latest saved Purchasing and Servicing records together.</p></div><Link href="/reports" className="dash-link">All reports <ArrowRight/></Link></div>{recentForms.length?<div className="dash-table-wrap"><table className="dash-table"><thead><tr><th>Reference</th><th>Customer</th><th>Type</th><th>Status</th><th>Updated</th><th/></tr></thead><tbody>{recentForms.map(r=><tr key={`${r.source}-${r.id}`}><td><b>{r.reference||"â€”"}</b><small>{r.detail||"â€”"}</small></td><td>{r.customer||"â€”"}</td><td><SourceBadge source={r.source}/></td><td><span className={`modern-status ${semanticStatusClass(String(r.status))}`}>{String(r.status||"â€”").replaceAll("_"," ")}</span></td><td>{dateText(r.updated_at)}</td><td><button className="modern-view-btn" onClick={()=>openReport(r.source,r.id)} disabled={detailLoading===`${r.source}-${r.id}`}><Eye/>{detailLoading===`${r.source}-${r.id}`?"Loadingâ€¦":r.source==="servicing"?"Filled Form":"View"}</button></td></tr>)}</tbody></table></div>:<div className="dash-empty-row">No recent forms have been saved yet.</div>}</article>
-   <div className="dash-side-stack"><article className="dash-card attention-card"><div className="dash-card-head compact"><div><span>Priority</span><h2>Needs attention</h2></div><Link href="/tasks" className="dash-link">All tasks <ArrowRight/></Link></div><div className="attention-list-v2">{attention.length?attention.map(x=><Link key={`${x.source}-${x.id}`} href={x.action_path}><SourceBadge source={x.source}/><div><b>{x.record_no} Â· {x.customer}</b><span>{x.current_stage} Â· {x.waiting_hours}h waiting</span></div><AlertTriangle/></Link>):<div className="healthy-state"><CheckCircle2/><div><b>Everything looks clear</b><span>No record meets the attention threshold.</span></div></div>}</div></article><article className="dash-card activity-card"><div className="dash-card-head compact"><div><span>Team</span><h2>Recent activity</h2></div><Link href="/activity" className="dash-link">Full activity <ArrowRight/></Link></div><div className="activity-list-v2">{(activity?.items||[]).slice(0,4).map(a=><Link href={`/process/${a.source}/${encodeURIComponent(String(a.record_id))}`} key={a.id}><span className={`activity-bubble ${a.source}`}>{a.source==="purchasing"?<FileText/>:<Wrench/>}</span><div><b>{a.record_no} Â· {a.action}</b><span>{a.person||"Not recorded"} Â· {relativeTime(a.timestamp)}</span></div></Link>)}{!(activity?.items||[]).length&&<div className="healthy-state"><Activity/><div><b>No recent activity</b><span>Updates will appear here automatically.</span></div></div>}</div></article></div>
-  </section>
-  {detail&&<ReportModal data={detail} onClose={()=>setDetail(null)}/>} 
- </main>
+function DailyBars({ rows, type }: { rows: Array<{ key: string; label: string; purchasing: number; servicing: number }>; type: "purchasing" | "servicing" }) {
+  const service = type === "servicing";
+  const values = rows.map((r) => Number(service ? r.servicing : r.purchasing));
+  const max = Math.max(1, ...values);
+  return (
+    <div className={`simple-daily-bars ${type}`}>
+      {rows.map((r, index) => {
+        const value = values[index] || 0;
+        const height = value > 0 ? Math.max(16, Math.round((value / max) * 112)) : 4;
+        return (
+          <div className="simple-bar-day" key={`${type}-${r.key}`}>
+            <div className="simple-bar-value">{value > 0 ? value : ""}</div>
+            <div className="simple-bar-track"><span style={{ height: `${height}px` }} /></div>
+            <small>{String(r.label || "").split(" ")[0]}</small>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
+type PeriodMetric = {
+  label: string;
+  total: number;
+  purchasing: number;
+  servicing: number;
+};
+
+function PeriodCard({ metric }: { metric: PeriodMetric }) {
+  return (
+    <article className="simple-period-card">
+      <span>{metric.label}</span>
+      <strong>{metric.total}</strong>
+      <div className="simple-period-split">
+        <b><i className="purchase-dot" />{metric.purchasing} Purchasing</b>
+        <b><i className="service-dot" />{metric.servicing} Servicing</b>
+      </div>
+    </article>
+  );
+}
+
+function SourceSummary({
+  type,
+  total,
+  today,
+  month,
+  year,
+}: {
+  type: "purchasing" | "servicing";
+  total: number;
+  today: number;
+  month: number;
+  year: number;
+}) {
+  const service = type === "servicing";
+  return (
+    <article className={`simple-source-card ${type}`}>
+      <div className="simple-source-head">
+        <span className="simple-source-icon">{service ? <Wrench /> : <ShoppingCart />}</span>
+        <div>
+          <span>{service ? "SERVICING FORMS" : "PURCHASING FORMS"}</span>
+          <h2>{service ? "Servicing" : "Purchasing"}</h2>
+        </div>
+        <Link href={`/forms/${type}`} className="simple-open-link">
+          Open <ArrowRight />
+        </Link>
+      </div>
+      <div className="simple-source-total">
+        <span>Total forms</span>
+        <strong>{total}</strong>
+      </div>
+      <div className="simple-source-periods">
+        <div><span>Today</span><b>{today}</b></div>
+        <div><span>This month</span><b>{month}</b></div>
+        <div><span>This year</span><b>{year}</b></div>
+      </div>
+    </article>
+  );
+}
+
+function RecentSourceList({
+  type,
+  rows,
+  openReport,
+  detailLoading,
+}: {
+  type: "purchasing" | "servicing";
+  rows: any[];
+  openReport: (source: "purchasing" | "servicing", id: any) => Promise<void>;
+  detailLoading: string;
+}) {
+  const service = type === "servicing";
+  return (
+    <article className={`simple-recent-card ${type}`}>
+      <div className="simple-recent-head">
+        <div>
+          <span>{service ? "SERVICING" : "PURCHASING"}</span>
+          <h2>{service ? "Latest servicing forms" : "Latest purchasing forms"}</h2>
+          <p>Saved records from this form only.</p>
+        </div>
+        <Link href={`/reports?type=${type}`}>All reports <ArrowRight /></Link>
+      </div>
+      <div className="simple-recent-list">
+        {rows.length ? rows.slice(0, 6).map((r: any) => {
+          const id = r.id;
+          const reference = service ? r.job_no : r.order_id;
+          const detail = service ? (r.product || r.problem || "Service job") : (r.products || `${r.item_count || 0} item(s)`);
+          const key = `${type}-${id}`;
+          return (
+            <div className="simple-recent-row" key={key}>
+              <div className="simple-recent-main">
+                <b>{reference || "—"}</b>
+                <span>{r.customer || "—"}</span>
+                <small>{detail || "—"}</small>
+              </div>
+              <div className="simple-recent-meta">
+                <span>{String(r.status || "—").replaceAll("_", " ")}</span>
+                <small>{dateText(r.updated_at)}</small>
+              </div>
+              <button
+                className="simple-view-button"
+                onClick={() => void openReport(type, id)}
+                disabled={detailLoading === key}
+              >
+                <Eye /> {detailLoading === key ? "Loading..." : service ? "Filled Form" : "View"}
+              </button>
+            </div>
+          );
+        }) : (
+          <div className="simple-empty-records">No saved {service ? "servicing" : "purchasing"} forms yet.</div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+export default function DashboardClient() {
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [detail, setDetail] = useState<any>(null);
+  const [detailLoading, setDetailLoading] = useState("");
+  const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const loadingRef = useRef(false);
+  const revisionRef = useRef("");
+  const lastLoadRef = useRef(0);
+
+  const load = async (force = false) => {
+    if (loadingRef.current) return;
+    if (!force && Date.now() - lastLoadRef.current < 2500) return;
+    loadingRef.current = true;
+    try {
+      setError("");
+      const data = await getDashboardBootstrap(force);
+      setOverview(data.overview);
+      if (data.revision) revisionRef.current = data.revision;
+      if (data.offline) {
+        setWarning(
+          data.data_mode === "saved-view"
+            ? "Live data is not connected. Showing the last saved dashboard from this browser."
+            : "Live company data is not connected yet.",
+        );
+      } else {
+        setWarning("");
+        writeDashboardSnapshot(data.overview, data.tasks, data.revision);
+      }
+      lastLoadRef.current = Date.now();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      loadingRef.current = false;
+    }
+  };
+
+  const openReport = async (source: "purchasing" | "servicing", id: any) => {
+    const key = `${source}-${id}`;
+    try {
+      setDetailLoading(key);
+      const r = await companyFetch(`/api/data/reports/${source}/${encodeURIComponent(String(id))}`, { cache: "no-store" });
+      const d = await r.json();
+      if (!r.ok || !d.available) throw new Error(d.error || "Report output could not be loaded");
+      setDetail(d);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setDetailLoading("");
+    }
+  };
+
+  const connectThisPc = async () => {
+    if (connecting) return;
+    setConnecting(true);
+    try {
+      const result = await connectLocalDataBridge();
+      if (result.ok) {
+        setWarning("");
+        await load(true);
+      } else {
+        setWarning("Could not connect to the local company data service on this PC.");
+      }
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  useEffect(() => {
+    let stopped = false;
+    const snap = readDashboardSnapshot();
+    if (snap) {
+      setOverview(snap.overview);
+      if (snap.revision) revisionRef.current = snap.revision;
+    }
+    void load(true);
+
+    const watch = async () => {
+      if (stopped || document.visibilityState !== "visible") return;
+      try {
+        const r = await getRevision();
+        if (stopped) return;
+        if (!revisionRef.current) {
+          revisionRef.current = r.revision;
+          return;
+        }
+        if (r.revision !== revisionRef.current) {
+          revisionRef.current = r.revision;
+          await load(true);
+        }
+      } catch {}
+    };
+
+    const timer = window.setInterval(watch, 6000);
+    const focus = () => { if (Date.now() - lastLoadRef.current > 8000) void load(true); };
+    const visibility = () => { if (document.visibilityState === "visible" && Date.now() - lastLoadRef.current > 8000) void load(true); };
+    window.addEventListener("focus", focus);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", focus);
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, []);
+
+  if (error && !overview) {
+    return (
+      <main className="page simple-forms-dashboard">
+        <div className="error-state"><AlertTriangle /><div><b>Dashboard could not load live form counts.</b><span>{error}</span><button className="btn primary" onClick={() => void load(true)}>Retry</button></div></div>
+      </main>
+    );
+  }
+  if (!overview) {
+    return <main className="page simple-forms-dashboard"><div className="center"><div><div className="spinner"/><b>Opening forms dashboard...</b></div></div></main>;
+  }
+
+  const f = overview.forms || {};
+  const s = overview.service || {};
+  const purchaseTotal = Number(f.total_orders || 0);
+  const serviceTotal = Number(s.total_jobs || 0);
+  const totalForms = purchaseTotal + serviceTotal;
+  const purchaseToday = Number(f.today_forms || 0);
+  const serviceToday = Number(s.today_forms || 0);
+  const purchaseMonth = Number(f.this_month_forms || 0);
+  const serviceMonth = Number(s.this_month_forms || 0);
+  const purchaseYear = Number(f.this_year_forms || 0);
+  const serviceYear = Number(s.this_year_forms || 0);
+
+  const periods: PeriodMetric[] = [
+    { label: "Today", total: purchaseToday + serviceToday, purchasing: purchaseToday, servicing: serviceToday },
+    { label: "This Month", total: purchaseMonth + serviceMonth, purchasing: purchaseMonth, servicing: serviceMonth },
+    { label: "This Year", total: purchaseYear + serviceYear, purchasing: purchaseYear, servicing: serviceYear },
+  ];
+
+  const dayMap = new Map<string, { key: string; label: string; purchasing: number; servicing: number; total: number }>();
+  for (const x of (f.daily || [])) {
+    const key = String(x.key || x.label || "");
+    if (key) dayMap.set(key, { key, label: String(x.label || key), purchasing: Number(x.forms || 0), servicing: 0, total: Number(x.forms || 0) });
+  }
+  for (const x of (s.daily || [])) {
+    const key = String(x.key || x.label || "");
+    if (!key) continue;
+    const row = dayMap.get(key) || { key, label: String(x.label || key), purchasing: 0, servicing: 0, total: 0 };
+    row.servicing = Number(x.forms || 0);
+    row.total = row.purchasing + row.servicing;
+    dayMap.set(key, row);
+  }
+  const chartRows = Array.from(dayMap.values()).sort((a, b) => a.key.localeCompare(b.key)).slice(-14);
+  const todayLabel = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  return (
+    <main className="page simple-forms-dashboard">
+      {warning && <div className="output-error connection-warning"><AlertTriangle/><div><b>Live data connection needs attention</b><span>{warning}</span></div><div className="connection-actions"><button className="btn primary" onClick={() => void connectThisPc()} disabled={connecting}>{connecting ? "Connecting..." : "Connect this PC"}</button><button className="btn" onClick={() => void load(true)}><RefreshCw/>Retry</button></div></div>}
+      {error && <div className="output-error"><AlertTriangle/><div><b>Live data is temporarily unavailable</b><span>{error}</span></div><button className="btn" onClick={() => void load(true)}>Retry</button></div>}
+
+      <section className="simple-dashboard-head">
+        <div>
+          <span>FORMS DASHBOARD</span>
+          <h1>Form Filling Summary</h1>
+          <p>{todayLabel} - Purchasing and Servicing shown separately.</p>
+        </div>
+        <div className="simple-dashboard-actions">
+          <Link href="/forms" className="btn primary"><FileText/>Open Forms</Link>
+          <button className="btn" onClick={() => void load(true)}><RefreshCw/>Refresh</button>
+        </div>
+      </section>
+
+      <section className="simple-total-row">
+        <article className="simple-total-card">
+          <div><span>ALL SAVED FORMS</span><h2>Total Forms</h2><p>Purchasing + Servicing</p></div>
+          <strong>{totalForms}</strong>
+          <div className="simple-total-breakdown"><b><i className="purchase-dot"/>{purchaseTotal} Purchasing</b><b><i className="service-dot"/>{serviceTotal} Servicing</b></div>
+        </article>
+        {periods.map((metric) => <PeriodCard key={metric.label} metric={metric} />)}
+      </section>
+
+      <section className="simple-source-grid">
+        <SourceSummary type="purchasing" total={purchaseTotal} today={purchaseToday} month={purchaseMonth} year={purchaseYear} />
+        <SourceSummary type="servicing" total={serviceTotal} today={serviceToday} month={serviceMonth} year={serviceYear} />
+      </section>
+
+      <section className="simple-chart-grid">
+        <article className="simple-chart-card purchasing">
+          <div className="simple-section-head"><div><span>PURCHASING - DAILY</span><h2>Purchasing Form Filling</h2><p>Last 14 days. Purchasing only.</p></div><b className="simple-chart-total">Total {purchaseTotal}</b></div>
+          <div className="simple-chart-area">
+            {chartRows.some((x) => x.purchasing > 0) ? <DailyBars rows={chartRows} type="purchasing"/> : <div className="simple-empty-chart"><CalendarDays/><b>No purchasing forms in this period</b><span>Saved Purchasing forms will appear here.</span></div>}
+          </div>
+        </article>
+        <article className="simple-chart-card servicing">
+          <div className="simple-section-head"><div><span>SERVICING - DAILY</span><h2>Servicing Form Filling</h2><p>Last 14 days. Servicing only.</p></div><b className="simple-chart-total">Total {serviceTotal}</b></div>
+          <div className="simple-chart-area">
+            {chartRows.some((x) => x.servicing > 0) ? <DailyBars rows={chartRows} type="servicing"/> : <div className="simple-empty-chart"><CalendarDays/><b>No servicing forms in this period</b><span>Saved Servicing forms will appear here.</span></div>}
+          </div>
+        </article>
+      </section>
+
+      <section className="simple-recent-grid">
+        <RecentSourceList type="purchasing" rows={f.recent || []} openReport={openReport} detailLoading={detailLoading}/>
+        <RecentSourceList type="servicing" rows={s.recent || []} openReport={openReport} detailLoading={detailLoading}/>
+      </section>
+
+      {detail && <ReportModal data={detail} onClose={() => setDetail(null)} />}
+    </main>
+  );
+}

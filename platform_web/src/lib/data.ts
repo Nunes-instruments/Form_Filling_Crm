@@ -220,10 +220,10 @@ export async function getDataConnectionStatus(){
   return {online:false,mode:"offline" as const};
 }
 export function money(v:any){return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(Number(v||0))}
-export function compactMoney(v:any){const n=Number(v||0);if(Math.abs(n)>=1e7)return `₹${(n/1e7).toFixed(1)}Cr`;if(Math.abs(n)>=1e5)return `₹${(n/1e5).toFixed(1)}L`;if(Math.abs(n)>=1e3)return `₹${(n/1e3).toFixed(1)}K`;return `₹${Math.round(n)}`}
+export function compactMoney(v:any){const n=Number(v||0);if(Math.abs(n)>=1e7)return `Γé╣${(n/1e7).toFixed(1)}Cr`;if(Math.abs(n)>=1e5)return `Γé╣${(n/1e5).toFixed(1)}L`;if(Math.abs(n)>=1e3)return `Γé╣${(n/1e3).toFixed(1)}K`;return `Γé╣${Math.round(n)}`}
 export function pct(done:any,total:any){const d=Number(done||0),t=Number(total||0);return t?Math.round(d/t*100):0}
-export function dateText(v:any){if(!v)return "—";const d=new Date(v);return isNaN(d.getTime())?String(v):d.toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"})}
-export function relativeTime(v:any){if(!v)return "—";const d=new Date(v);if(isNaN(d.getTime()))return String(v);const s=Math.max(0,(Date.now()-d.getTime())/1000);if(s<60)return "Just now";if(s<3600)return `${Math.floor(s/60)}m ago`;if(s<86400)return `${Math.floor(s/3600)}h ago`;if(s<604800)return `${Math.floor(s/86400)}d ago`;return d.toLocaleDateString("en-IN",{day:"numeric",month:"short"})}
+export function dateText(v:any){if(!v)return "ΓÇö";const d=new Date(v);return isNaN(d.getTime())?String(v):d.toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"})}
+export function relativeTime(v:any){if(!v)return "ΓÇö";const d=new Date(v);if(isNaN(d.getTime()))return String(v);const s=Math.max(0,(Date.now()-d.getTime())/1000);if(s<60)return "Just now";if(s<3600)return `${Math.floor(s/60)}m ago`;if(s<86400)return `${Math.floor(s/3600)}h ago`;if(s<604800)return `${Math.floor(s/86400)}d ago`;return d.toLocaleDateString("en-IN",{day:"numeric",month:"short"})}
 export function moduleUrl(mod:any){
   if(!mod)return "";
   const path=String(mod.home_path||"/");
