@@ -1,0 +1,15 @@
+NUNES V6.6.6 - WHATSAPP INSTANT OPEN
+=====================================
+
+MAIN SERVER ONLY:
+1. Run L_APPLY_WHATSAPP_INSTANT_V6_6_6.bat as Administrator.
+2. Wait for [OK] WHATSAPP FAST OPEN ENGINE IS LIVE.
+3. Open Servicing -> Settings or save a service form and test Open WhatsApp Web Login.
+4. If working, run G_SAVE_TO_GITHUB.bat and use version note:
+   V6.6.6 WhatsApp instant open speed update
+
+STAFF PCs:
+No ZIP, no setup, no reinstall. Refresh / Ctrl+R only after the main-server update.
+
+DATA SAFETY:
+Purchasing, Servicing, Gmail, Gemini and the existing WhatsApp linked profile are preserved.

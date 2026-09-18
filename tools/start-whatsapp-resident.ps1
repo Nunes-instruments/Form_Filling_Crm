@@ -66,7 +66,7 @@ try{
   $psi.RedirectStandardError=$false
   $p=[Diagnostics.Process]::Start($psi)
   if($null -eq $p){exit 4}
-  try{$p.PriorityClass=[Diagnostics.ProcessPriorityClass]::Normal}catch{}
+  try{$p.PriorityClass=[Diagnostics.ProcessPriorityClass]::AboveNormal}catch{}
 
   $deadline=[DateTime]::UtcNow.AddSeconds(7)
   while([DateTime]::UtcNow -lt $deadline){

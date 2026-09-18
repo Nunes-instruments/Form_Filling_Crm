@@ -94,36 +94,31 @@ export async function getWhatsAppWebStatus(initialize = true): Promise<SidecarSt
   }
 }
 
-export async function prepareWhatsAppWeb(): Promise<SidecarStatus> {
-  // A cold resident may not yet be listening. Replay the explicit login request
-  // until it reaches the resident, then wait briefly for the visible official
-  // WhatsApp Web window to actually open on the main-server PC.
-  const deadline = Date.now() + 10000;
-  let kicked = false;
-  let lastError: unknown;
+async function replayPrepareInBackground() {
+  const deadline = Date.now() + 8000;
   while (Date.now() < deadline) {
     try {
-      const response = await sidecarFetch('/prepare', { method: 'POST', body: '{}' }, 1200);
-      if (!response.ok) throw new Error(`runtime HTTP ${response.status}`);
-      let status = await response.json() as SidecarStatus;
-      if (status.ready || status.loginBrowserOpen || status.state === 'AUTHENTICATED' || status.state === 'ERROR') return status;
-
-      const progressDeadline = Math.min(deadline, Date.now() + 5000);
-      while (Date.now() < progressDeadline) {
-        await new Promise(resolve => setTimeout(resolve, 250));
-        const poll = await sidecarFetch('/status', undefined, 700);
-        if (!poll.ok) break;
-        status = await poll.json() as SidecarStatus;
-        if (status.ready || status.loginBrowserOpen || status.state === 'AUTHENTICATED' || status.state === 'ERROR') return status;
-      }
-      return status;
-    } catch (error) {
-      lastError = error;
-      if (!kicked) { startSidecarOnDemand(); kicked = true; }
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
+      const response = await sidecarFetch('/prepare', { method: 'POST', body: '{}' }, 650);
+      if (response.ok) return;
+    } catch { /* resident is still starting */ }
+    await new Promise(resolve => setTimeout(resolve, 120));
   }
-  return { ...unavailable(lastError), state: 'ERROR', lastError: 'WhatsApp resident did not respond within 10 seconds. Run CHECK_WHATSAPP_STATUS.bat on the main-server PC and retry login.' };
+}
+
+export async function prepareWhatsAppWeb(): Promise<SidecarStatus> {
+  // V6.6.6 FAST OPEN: never keep the button waiting for Chromium/WhatsApp page load.
+  // If the resident is warm this returns in a few milliseconds. If Windows has to
+  // start the resident, return STARTING immediately and replay /prepare in the
+  // background until the resident accepts it. The UI polls local status separately.
+  try {
+    const response = await sidecarFetch('/prepare', { method: 'POST', body: '{}' }, 650);
+    if (!response.ok) throw new Error(`runtime HTTP ${response.status}`);
+    return await response.json() as SidecarStatus;
+  } catch {
+    startSidecarOnDemand();
+    void replayPrepareInBackground();
+    return { ...starting(), loginBrowserOpen: true, lastError: '', runtimeInstalling: false };
+  }
 }
 
 export async function sendWhatsAppWebMessage(phoneDigits: string, message: string, branded = false) {

@@ -1,0 +1,25 @@
+NUNES V6.6.6 - WHATSAPP INSTANT OPEN
+=====================================
+
+Purpose
+-------
+Make the WhatsApp Web Login action feel immediate and reduce the time between
+linking WhatsApp and automatic message sending.
+
+Changes
+-------
+1. /api/whatsapp/prepare no longer waits for Chromium / WhatsApp page load.
+2. A cold WhatsApp resident starts in the background and the login request is replayed automatically.
+3. The sidecar marks the login as opening immediately when the owner presses the button.
+4. The WhatsApp Chromium launch removes nonessential Chrome startup features.
+5. The WhatsApp resident runs AboveNormal priority.
+6. Settings polls active WhatsApp login at 350 ms instead of 900 ms.
+7. Service-form pending WhatsApp sending polls at 650 ms instead of 2500 ms.
+8. Existing linked WhatsApp session, Gmail, Gemini, Purchasing and Servicing data are preserved.
+9. Staff PCs require no ZIP. After the main server update they only refresh/open NUNES Operations.
+
+Versions
+--------
+Main platform: 6.6.6
+Servicing: 1.1.37
+WhatsApp sidecar: 3.3.0

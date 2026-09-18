@@ -106,7 +106,7 @@ export default function SettingsClient({ initialSettings = null }: { initialSett
   }
 
   async function openWhatsAppWebLogin() {
-    setError(''); setMessage('');
+    setError(''); setMessage('Opening WhatsApp Web now…');
     try {
       const data = await fetchJson(`/api/whatsapp/prepare?ts=${Date.now()}`, { method:'POST' });
       setComm(prev=>({...prev, whatsapp:data}));
@@ -145,7 +145,7 @@ export default function SettingsClient({ initialSettings = null }: { initialSett
       // V21 no longer waits for an app-generated QR. Poll modestly while the
       // official login window/authentication is active, then back off when stable.
       const activeLogin = latest?.state === 'LOGIN_BROWSER_OPEN' || latest?.state === 'AUTHENTICATED' || latest?.state === 'STARTING';
-      timer = setTimeout(poll, latest?.ready ? 5000 : activeLogin ? 900 : 2500);
+      timer = setTimeout(poll, latest?.ready ? 5000 : activeLogin ? 350 : 1200);
     };
     timer = setTimeout(poll, 60);
     return ()=>{ cancelled = true; if (timer) clearTimeout(timer); };

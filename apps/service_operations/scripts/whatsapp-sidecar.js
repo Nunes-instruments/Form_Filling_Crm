@@ -10,7 +10,7 @@ const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 
-const VERSION = '3.2.1';
+const VERSION = '3.3.0';
 const ENGINE = 'WhatsAppWebLink';
 const PORT = Number(process.env.WHATSAPP_SIDECAR_PORT || 5056);
 const LOCALAPPDATA = process.env.LOCALAPPDATA || path.join(process.cwd(), 'data');
@@ -134,13 +134,16 @@ async function ensureClient(visibleLogin = false, force = false) {
     await fsp.mkdir(AUTH_ROOT, { recursive: true });
 
     manualShutdown = false;
-    loginBrowserOpen = false;
+    // FAST OPEN: mark the explicit login request as opening immediately, instead of
+    // waiting for WhatsApp's QR event. The previous build made the UI appear frozen
+    // for several seconds even though Chrome had already been requested.
+    loginBrowserOpen = Boolean(visibleLogin);
     sessionStartedAt = new Date().toISOString();
     connectedNumber = '';
     loadingMessage = visibleLogin
-      ? 'Official WhatsApp Web login opened on the main-server PC'
+      ? 'Opening official WhatsApp Web now on the main-server PC'
       : 'Restoring the saved WhatsApp Web login';
-    mark('STARTING');
+    mark(visibleLogin ? 'LOGIN_BROWSER_OPEN' : 'STARTING');
 
     const nextClient = new Client({
       authStrategy: new LocalAuth({ clientId: CLIENT_ID, dataPath: AUTH_ROOT, rmMaxRetries: 8 }),
@@ -152,8 +155,14 @@ async function ensureClient(visibleLogin = false, force = false) {
           '--no-default-browser-check',
           '--disable-dev-shm-usage',
           '--disable-gpu',
+          '--disable-extensions',
+          '--disable-component-update',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--no-service-autorun',
           '--disable-background-timer-throttling',
           '--disable-renderer-backgrounding',
+          '--disable-features=Translate,MediaRouter,OptimizationHints,AutofillServerCommunication',
           '--window-size=1280,900'
         ]
       },
@@ -358,7 +367,15 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, statusPayload());
     }
     if (req.method === 'POST' && url.pathname === '/prepare') {
-      if (state !== 'READY' && !loginBrowserOpen && !(client && visibleClientStarting)) void ensureClient(true, true);
+      if (state !== 'READY' && !loginBrowserOpen && !(client && visibleClientStarting)) {
+        // Acknowledge the click immediately. Browser/WhatsApp initialization continues
+        // asynchronously so Settings and the Service form never wait on page load.
+        loginBrowserOpen = true;
+        visibleClientStarting = true;
+        loadingMessage = 'Opening official WhatsApp Web now on the main-server PC';
+        mark('LOGIN_BROWSER_OPEN');
+        void ensureClient(true, true);
+      }
       return sendJson(res, 200, statusPayload());
     }
     if (req.method === 'POST' && url.pathname === '/logout') {

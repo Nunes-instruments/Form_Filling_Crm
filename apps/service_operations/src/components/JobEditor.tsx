@@ -508,6 +508,7 @@ export default function JobEditor({ jobId, autoPreview = false }: { jobId?: stri
   async function openWhatsAppWebLogin() {
     setWhatsappRetrying(true);
     setError('');
+    setWhatsappStatus((prev:any)=>({ ...(prev||{}), state:'LOGIN_BROWSER_OPEN', loginBrowserOpen:true, ready:false, lastError:'' }));
     try {
       const status = await fetch('/api/whatsapp/prepare', { method:'POST', cache:'no-store' }).then(r => r.json());
       setWhatsappStatus(status);
@@ -550,7 +551,7 @@ export default function JobEditor({ jobId, autoPreview = false }: { jobId?: stri
   useEffect(() => {
     if (!whatsappLoginOpen) return;
     void refreshWhatsAppLogin();
-    const timer = setInterval(() => { void refreshWhatsAppLogin(); }, 2500);
+    const timer = setInterval(() => { void refreshWhatsAppLogin(); }, 650);
     return () => clearInterval(timer);
   }, [whatsappLoginOpen, whatsappRetrying]);
 

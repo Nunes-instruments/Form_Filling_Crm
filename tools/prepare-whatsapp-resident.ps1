@@ -77,7 +77,7 @@ $config=[ordered]@{
   port=5056
   engine='WhatsAppWebLink'
   packageVersion=$wanted
-  sidecarVersion='3.2.1'
+  sidecarVersion='3.3.0'
   preparedAt=[DateTime]::UtcNow.ToString('o')
 }
 $config|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $residentDir 'whatsapp-resident.json') -Encoding UTF8
