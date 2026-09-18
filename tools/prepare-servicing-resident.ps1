@@ -68,6 +68,23 @@ function Test-SafeDirectory([string]$Path) {
   try { return (-not [string]::IsNullOrWhiteSpace($Path)) -and [System.IO.Directory]::Exists($Path) } catch { return $false }
 }
 
+# NUNES_V2_7_8_PERMANENT_SERVICE_DATA_GUARD
+function Test-ServiceDataJunction([string]$AppPath,[string]$ExpectedSharedData) {
+  try {
+    if ([string]::IsNullOrWhiteSpace($AppPath)) { return $false }
+    $dataPath = Join-Path $AppPath 'data'
+    $item = Get-Item -LiteralPath $dataPath -Force -ErrorAction Stop
+    if (-not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { return $false }
+    $target = $item.Target
+    if ($target -is [Array]) { $target = $target[0] }
+    if ([string]::IsNullOrWhiteSpace([string]$target)) { return $false }
+    $actual = ([IO.Path]::GetFullPath([string]$target)).TrimEnd('\')
+    $expected = ([IO.Path]::GetFullPath($ExpectedSharedData)).TrimEnd('\')
+    return ($actual -ieq $expected)
+  } catch { return $false }
+}
+
+
 # Use only an exact-source, complete resident already prepared on this owner PC.
 $configFile = Join-Path $residentDir 'servicing-resident.json'
 $previous = $null
@@ -81,7 +98,9 @@ if ($previous -and [string]$previous.sourceSignature -eq $sourceSig) {
       (Test-SafeFile (Join-Path $existingApp '.next\BUILD_ID')) -and
       (Test-SafeFile (Join-Path $existingApp '.next\routes-manifest.json')) -and
       (Test-SafeFile (Join-Path $existingApp '.next\prerender-manifest.json')) -and
-      (Test-SafeFile (Join-Path $existingApp 'data\jobs.json'))
+      (Test-SafeFile (Join-Path $existingApp 'data\jobs.json')) -and
+      (Test-ServiceDataJunction $existingApp $sharedData) -and
+      (Test-ServiceDataJunction $existingApp $sharedData)
   } catch { $complete = $false }
   if ($complete) {
     Write-Host '[Servicing] Exact application build already prepared; skipping install, copy and build.' -ForegroundColor Green

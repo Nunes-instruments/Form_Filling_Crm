@@ -351,7 +351,10 @@ body{font-size:14px;line-height:1.5;letter-spacing:-.003em}
 @media(max-width:1050px){.simple-chart-grid{grid-template-columns:1fr}}
 /* NUNES_SIMPLE_DASHBOARD_V2_7_END */
 
-
-
-
-
+/* NUNES V2.7.7 STAFF DELETE */
+.task-card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn.danger-action{background:#fff;border-color:#fecaca;color:#b42318}
+.btn.danger-action:hover{background:#fff1f0;border-color:#fca5a5;color:#991b1b}
+.btn.danger-action:disabled{opacity:.55;cursor:wait}
+.btn.danger-action svg{width:15px;height:15px}
+@media(max-width:800px){.task-card-actions{justify-content:flex-start;width:100%}.task-card-actions .btn{flex:1}}

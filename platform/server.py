@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import platform
 import socket
+import shutil
 import sqlite3
 import subprocess
 import threading
@@ -16,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 PLATFORM_DIR = Path(__file__).resolve().parent
 ROOT_DIR = PLATFORM_DIR.parent
@@ -1162,6 +1163,86 @@ def revision_payload() -> dict:
     }
 
 
+# NUNES_V2_7_7_STAFF_DELETE
+def _deleted_records_root() -> Path:
+    local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+    if local_app_data:
+        return Path(local_app_data) / "NUNES Operations" / "DeletedRecords"
+    return ROOT_DIR / "backups" / "DeletedRecords"
+
+
+def _new_delete_backup_dir(source: str, record_id: str) -> Path:
+    safe_id = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in str(record_id))[:80] or "record"
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    folder = _deleted_records_root() / f"{source}_{safe_id}_{stamp}"
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
+def _delete_purchasing_record(order_id: int) -> tuple[bool, str, str]:
+    db_path = ROOT_DIR / "apps" / "order_forms" / "data" / "nunes_forms.db"
+    if not db_path.exists():
+        return False, "Purchasing database is unavailable.", ""
+    conn = sqlite3.connect(str(db_path), timeout=4.0)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys=ON")
+    try:
+        row = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
+        if row is None:
+            return False, "Purchasing form not found.", ""
+        backup_dir = _new_delete_backup_dir("purchasing", str(order_id))
+        backup_db = backup_dir / "nunes_forms-before-delete.db"
+        backup_conn = sqlite3.connect(str(backup_db))
+        try:
+            conn.backup(backup_conn)
+        finally:
+            backup_conn.close()
+        (backup_dir / "record.json").write_text(
+            json.dumps(dict(row), ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        conn.execute("DELETE FROM orders WHERE id=?", (order_id,))
+        conn.commit()
+        return True, text(row["order_name"], f"Order #{order_id}"), str(backup_dir)
+    finally:
+        conn.close()
+
+
+def _service_delete_request(job_id: str):
+    url = f"http://127.0.0.1:5055/api/jobs/{quote(str(job_id), safe='')}"
+    req = urllib.request.Request(url, method="DELETE", headers={"User-Agent": "NUNES-Company-Delete/2.7.7"})
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        raw = resp.read().decode("utf-8", "ignore")
+        return resp.status, json.loads(raw or "{}")
+
+
+def _delete_servicing_record(job_id: str) -> tuple[bool, str, str]:
+    jobs_path = _service_jobs_path()
+    jobs = _service_jobs()
+    job = next((j for j in jobs if str(j.get("id")) == str(job_id)), None)
+    if job is None:
+        return False, "Servicing form not found.", ""
+    backup_dir = _new_delete_backup_dir("servicing", str(job_id))
+    if jobs_path.exists():
+        shutil.copy2(jobs_path, backup_dir / "jobs-before-delete.json")
+    (backup_dir / "record.json").write_text(
+        json.dumps(job, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    uploads = jobs_path.parent / "uploads" / str(job_id)
+    if uploads.exists():
+        shutil.copytree(uploads, backup_dir / "uploads", dirs_exist_ok=True)
+    try:
+        status, payload = _service_delete_request(str(job_id))
+    except Exception:
+        try:
+            start_module("service_operations")
+            time.sleep(0.7)
+            status, payload = _service_delete_request(str(job_id))
+        except Exception as exc:
+            return False, f"Servicing delete service is unavailable: {exc}", str(backup_dir)
+    if not (200 <= int(status) < 300 and bool(payload.get("ok"))):
+        return False, text(payload.get("error"), "Servicing delete failed."), str(backup_dir)
+    return True, text(job.get("jobNo"), "Service Job"), str(backup_dir)
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(STATIC_DIR), **kwargs)
@@ -1237,6 +1318,41 @@ class Handler(SimpleHTTPRequestHandler):
         if p.startswith("/api/"): return self._json({"error": "Not found"}, 404)
         if p not in {"/", "/index.html"} and not (STATIC_DIR / p.lstrip("/")).exists(): self.path = "/index.html"
         return super().do_GET()
+
+
+    # NUNES_V2_7_7_STAFF_DELETE
+    def do_DELETE(self):
+        parsed = urlparse(self.path)
+        p = parsed.path
+        if p.startswith("/api/") and not self._api_authorized():
+            return self._json({"error": "Unauthorized company data request"}, 401)
+        prefix = "/api/records/"
+        if p.startswith(prefix):
+            rest = p[len(prefix):].strip("/")
+            parts = rest.split("/", 1)
+            if len(parts) != 2:
+                return self._json({"error": "Delete record path is invalid."}, 400)
+            source, raw_id = parts[0].strip().lower(), unquote(parts[1]).strip()
+            if source == "purchasing":
+                try:
+                    order_id = int(raw_id)
+                except Exception:
+                    return self._json({"error": "Invalid Purchasing record id."}, 400)
+                try:
+                    ok, label, backup = _delete_purchasing_record(order_id)
+                except Exception as exc:
+                    return self._json({"error": str(exc)}, 500)
+            elif source == "servicing":
+                try:
+                    ok, label, backup = _delete_servicing_record(raw_id)
+                except Exception as exc:
+                    return self._json({"error": str(exc)}, 500)
+            else:
+                return self._json({"error": "Unknown record type."}, 400)
+            if not ok:
+                return self._json({"error": label, "backup": backup or None}, 404 if "not found" in label.lower() else 503)
+            return self._json({"ok": True, "deleted": True, "source": source, "id": raw_id, "label": label, "backup": backup})
+        return self._json({"error": "Not found"}, 404)
 
     def do_POST(self):
         parsed = urlparse(self.path)
