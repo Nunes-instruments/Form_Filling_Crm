@@ -9,7 +9,7 @@ function upstream(): string | null {
   const configured = (process.env.NUNES_API_INTERNAL_URL || process.env.NUNES_API_URL || "").trim();
   if (configured) return configured.replace(/\/$/, "");
   // Local/office mode keeps the existing private data service default.
-  if (!process.env.VERCEL) return "http://127.0.0.1:8766";
+  if (!process.env.VERCEL) return "http://127.0.0.1:8865";
   // Never silently point a Vercel function at its own localhost. That produces a
   // deployment that looks healthy while all company records are unavailable.
   return null;

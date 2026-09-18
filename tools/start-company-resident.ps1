@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
 $stateRoot = Join-Path $env:LOCALAPPDATA 'NUNES Operations'
@@ -124,6 +124,7 @@ try {
     $psi.EnvironmentVariables['NUNES_API_PORT']=[string]$apiPort
     $psi.EnvironmentVariables['NUNES_PORT']=[string]$apiPort
     $psi.EnvironmentVariables['NUNES_HOST']='0.0.0.0'
+    $psi.EnvironmentVariables['NUNES_SERVICE_DATA_FILE']=Join-Path $stateRoot 'ServiceData\jobs.json' # NUNES_FINAL_V2_6
     $p=[Diagnostics.Process]::Start($psi); if($null -eq $p){exit 4}
     try{$p.PriorityClass=[Diagnostics.ProcessPriorityClass]::AboveNormal}catch{}
     if(-not (Wait-Health $apiUrl 'api' 3500)){exit 5}

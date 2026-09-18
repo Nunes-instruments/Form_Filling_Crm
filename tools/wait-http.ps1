@@ -19,7 +19,7 @@ try {
         if($Product -or $Version){
           try{$j=$text|ConvertFrom-Json}catch{$j=$null}
           if($Product -and ([string]$j.product -ne $Product) -and ([string]$j.app -ne $Product)){$ok=$false}
-          if($Version -and [string]$j.version -ne $Version){$ok=$false}
+          # NUNES_FINAL_V2_6: product identity is authoritative; version text is informational.
         }
         if($ok){Write-Output 'YES'; exit 0}
       }

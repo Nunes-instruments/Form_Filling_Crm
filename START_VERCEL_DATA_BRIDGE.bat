@@ -4,6 +4,7 @@ title NUNES V6.4.7 - Vercel Data Bridge
 pushd "%~dp0" >nul 2>&1
 if errorlevel 1 (echo ERROR: Cannot open this folder.& pause & exit /b 1)
 set "ROOT=%CD%"
+set "NUNES_SERVICE_DATA_FILE=%LOCALAPPDATA%\NUNES Operations\ServiceData\jobs.json"
 cls
 echo ============================================================
 echo       NUNES V6.4.7 - VERCEL DATA BRIDGE

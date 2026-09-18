@@ -10,7 +10,7 @@ let warmCache:ServerCache|null=null;
 function upstream(): string | null {
   const configured=(process.env.NUNES_API_INTERNAL_URL||process.env.NUNES_API_URL||"").trim();
   if(configured)return configured.replace(/\/$/,"");
-  if(!process.env.VERCEL)return "http://127.0.0.1:8766";
+  if(!process.env.VERCEL)return "http://127.0.0.1:8865";
   return null;
 }
 

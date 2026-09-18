@@ -23,6 +23,7 @@ if "!ROOT:~0,2!"=="\\" (
   )
 )
 set "STATE_DIR=%LOCALAPPDATA%\NUNES Operations"
+set "NUNES_SERVICE_DATA_FILE=%LOCALAPPDATA%\NUNES Operations\ServiceData\jobs.json"
 if not exist "%STATE_DIR%" mkdir "%STATE_DIR%" >nul 2>&1
 set "STATUSFILE=%STATE_DIR%\server-status.txt"
 >"%STATUSFILE%" echo STARTING - Initializing NUNES server...

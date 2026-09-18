@@ -15,7 +15,7 @@ try{
       try{
         $text=$client.GetStringAsync("http://127.0.0.1:$p/api/health").GetAwaiter().GetResult()
         $j=$text|ConvertFrom-Json
-        if($j.ok -eq $true -and [string]$j.product -eq 'NUNES Company Platform' -and [string]$j.version -eq $Version){Write-Output $p; exit 0}
+        if($j.ok -eq $true -and [string]$j.product -eq 'NUNES Company Platform'){Write-Output $p; exit 0}
       }catch{}
     }
     if($WaitMilliseconds -le 0){break}

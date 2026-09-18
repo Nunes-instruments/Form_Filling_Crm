@@ -1,14 +1,14 @@
 @echo off
-setlocal EnableExtensions EnableDelayedExpansion
-cd /d "%~dp0"
+setlocal EnableExtensions
 set "NUNES_NO_BROWSER=1"
-
-rem SPEED-ONLY: keep Servicing hot independently of the dashboard/data API.
-rem Start/check it FIRST so a dashboard recovery can never delay the service form.
+rem V2.4 STABILITY: the watchdog must never run the heavy/version-sensitive startup
+rem while the prepared resident is healthy. The resident launcher only starts a
+rem missing service and returns immediately when 8795 + the Data API are healthy.
 start "" /b cmd /d /c "call ""%~dp0tools\EARLY_START_SERVICING.bat""" >nul 2>&1
-
-rem Use the same mutex-protected launcher as the scheduled server. If another
-rem startup/build is already active this exits immediately instead of starting a
-rem second npm/Next process and locking .next/server-startup.log files.
+set "RESIDENT=%LOCALAPPDATA%\NUNES Operations\CompanyResident\start-company-resident.ps1"
+if exist "%RESIDENT%" (
+  powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%RESIDENT%" >nul 2>&1
+  exit /b %errorlevel%
+)
 call "%~dp0START_SERVER_AUTOMATIC.bat" >nul 2>&1
-exit /b 0
+exit /b %errorlevel%

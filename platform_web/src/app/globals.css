@@ -323,3 +323,14 @@ body{font-size:14px;line-height:1.5;letter-spacing:-.003em}
 .dashboard-page-v2 .dash-status-track{height:7px;margin-top:6px;border-radius:999px;background:#eef2f7;overflow:hidden}
 .dashboard-page-v2 .dash-status-track>span{display:block;height:100%;border-radius:999px;min-width:7px}
 @media(max-width:900px){.dashboard-page-v2 .dash-welcome h1{font-size:31px}.dashboard-page-v2 .dash-kpi>strong{font-size:31px}}
+
+/* NUNES FILLED SERVICING FORM V2 */
+.legacy-proof-links{display:grid;gap:9px}.legacy-proof-link{display:flex;align-items:center;gap:10px;border:1px solid #e1e8ef;border-radius:10px;padding:10px 12px;background:#fff}.legacy-proof-link>div{min-width:0;flex:1}.legacy-proof-link b{display:block}.legacy-proof-link small{display:block;color:#657587;overflow-wrap:anywhere}.legacy-proof-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:9px;background:#f2f6fa}.legacy-proof-icon svg{width:18px;height:18px}
+
+
+
+
+/* V2_6_BULK_ENTRY_STYLE */
+.legacy-import-entry{margin-top:18px;border:1px solid #dfe5ee;border-radius:16px;background:#fff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:18px;box-shadow:0 7px 22px rgba(15,23,42,.04)}
+.legacy-import-entry>div{display:flex;flex-direction:column;gap:5px}.legacy-import-entry b{font-size:15px}.legacy-import-entry span{font-size:12px;color:#64748b;line-height:1.5;max-width:760px}
+@media(max-width:760px){.legacy-import-entry{align-items:flex-start;flex-direction:column}.legacy-import-entry .btn{width:100%}}

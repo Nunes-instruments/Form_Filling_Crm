@@ -30,6 +30,20 @@ HOST = os.environ.get("NUNES_HOST", "0.0.0.0")
 PORT = int(os.environ.get("NUNES_API_PORT", os.environ.get("NUNES_PORT", "8766")))
 VERSION = "6.5.0"
 DATA_API_TOKEN = os.environ.get("NUNES_DATA_API_TOKEN", "").strip()
+
+# NUNES_FINAL_V2_6: one authoritative Servicing data path for staff + dashboard.
+def _service_jobs_path() -> Path:
+    configured = os.environ.get("NUNES_SERVICE_DATA_FILE", "").strip()
+    if configured:
+        return Path(configured)
+    local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+    if local_app_data:
+        persistent = Path(local_app_data) / "NUNES Operations" / "ServiceData" / "jobs.json"
+        if persistent.exists():
+            return persistent
+    return ROOT_DIR / "apps" / "service_operations" / "data" / "jobs.json"
+
+
 BROWSER_ORIGINS = {
     "https://nunes-operations-workspace.vercel.app",
     "http://127.0.0.1:8795",
@@ -94,10 +108,14 @@ def _file_stamp(path: Path) -> tuple:
     except Exception:
         return (0, 0)
 
+# V6.6.12 LIVE SERVICING DATA PATH
+# The Servicing resident writes staff/owner job cards to one persistent Windows-local
+# ServiceData folder. The management dashboard must read that same file, not the
+# copy that happened to ship inside the current source/ZIP folder.
 def _data_stamp() -> tuple:
     db = ROOT_DIR / "apps" / "order_forms" / "data" / "nunes_forms.db"
     wal = Path(str(db) + "-wal")
-    jobs = ROOT_DIR / "apps" / "service_operations" / "data" / "jobs.json"
+    jobs = _service_jobs_path()
     return (_file_stamp(db), _file_stamp(wal), _file_stamp(jobs))
 
 def _cached_payload(name: str, ttl: float, builder):
@@ -120,7 +138,7 @@ def _cached_payload(name: str, ttl: float, builder):
         return value
 
 def _service_jobs() -> list[dict]:
-    path = ROOT_DIR / "apps" / "service_operations" / "data" / "jobs.json"
+    path = _service_jobs_path()
     stamp = _file_stamp(path)
     with _jobs_lock:
         if _jobs_cache.get("stamp") == stamp:
@@ -551,17 +569,17 @@ def purchase_report_detail(order_id: int) -> dict:
                 "quote_date": text(o.get("quote_date")),
                 "branch": BRANCH_MAP.get(text(o.get("branch"), "MAIN"), text(o.get("branch"), "MAIN").title()),
                 "market_type": text(o.get("market_type"), "IND"),
-                "customer_name": text(o.get("customer_name"), "—"),
-                "place": text(o.get("place"), "—"),
-                "marketing_person": text(o.get("marketing_person"), "—"),
-                "delivery_period": text(o.get("delivery_period"), "—"),
-                "terms": text(o.get("terms"), "—"),
-                "service_person": text(o.get("service_person"), "—"),
+                "customer_name": text(o.get("customer_name"), "â€”"),
+                "place": text(o.get("place"), "â€”"),
+                "marketing_person": text(o.get("marketing_person"), "â€”"),
+                "delivery_period": text(o.get("delivery_period"), "â€”"),
+                "terms": text(o.get("terms"), "â€”"),
+                "service_person": text(o.get("service_person"), "â€”"),
                 "service_date": text(o.get("service_date")),
                 "service_amount": money(o.get("service_amount")),
-                "order_place_to": text(o.get("order_place_to"), "—"),
-                "remarks": text(o.get("remarks"), "—"),
-                "approved_by": text(o.get("approved_by"), "—"),
+                "order_place_to": text(o.get("order_place_to"), "â€”"),
+                "remarks": text(o.get("remarks"), "â€”"),
+                "approved_by": text(o.get("approved_by"), "â€”"),
                 "approval_date": text(o.get("approval_date")),
                 "status": text(o.get("current_status"), "Draft"),
                 "created_at": text(o.get("created_at")),
@@ -693,8 +711,8 @@ def form_overview() -> dict:
                 "id": r["id"], "order_id": text(r["order_name"], f"Order #{r['id']}"),
                 "quote_no": text(r["quote_no"]), "quote_date": text(r["quote_date"]),
                 "branch": BRANCH_MAP.get(text(r["branch"], "MAIN"), text(r["branch"], "MAIN").title()),
-                "market_type": text(r["market_type"], "IND"), "customer": text(r["customer_name"], "—"),
-                "products": text(r["products_summary"], "—"), "marketing_person": text(r["marketing_person"], "—"), "staff": staff[:4],
+                "market_type": text(r["market_type"], "IND"), "customer": text(r["customer_name"], "â€”"),
+                "products": text(r["products_summary"], "â€”"), "marketing_person": text(r["marketing_person"], "â€”"), "staff": staff[:4],
                 "latest_person": latest_person, "current_stage": current_stage, "progress": round(done / max(1, len(PURCHASE_STAGES)) * 100),
                 "status": text(r["current_status"], "Draft"), "value": money(value), "received": money(rec),
                 "outstanding": money(max(0.0, value-rec)), "item_count": int(r["item_count"] or 0),
@@ -731,7 +749,7 @@ def form_overview() -> dict:
 
 
 def service_report_detail(job_id: str) -> dict:
-    jobs_path = ROOT_DIR / "apps" / "service_operations" / "data" / "jobs.json"
+    jobs_path = _service_jobs_path()
     if not jobs_path.exists():
         return {"available": False, "error": "Servicing database has not been created yet."}
     try:
@@ -752,9 +770,9 @@ def service_report_detail(job_id: str) -> dict:
         return {
             "available": True, "type": "servicing",
             "job": {
-                "id": job.get("id"), "job_no": text(job.get("jobNo"), "Service Job"), "job_date": text(job.get("jobDate")),
-                "status": text(job.get("status"), "RECEIVED"), "branch": text(job.get("branchName"), "—"),
-                "office_type": text(job.get("officeType"), "—"), "notes": text(job.get("notes"), "—"),
+                "id": job.get("id"), "job_no": text(job.get("jobNo"), "Service Job"), "paper_no": text(job.get("legacySerialNo")), "job_date": text(job.get("jobDate")),
+                "status": text(job.get("status"), "RECEIVED"), "branch": text(job.get("branchName"), "â€”"),
+                "office_type": text(job.get("officeType"), "â€”"), "notes": text(job.get("notes"), "â€”"),
                 "created_at": text(job.get("createdAt")), "updated_at": text(job.get("updatedAt")),
             },
             "customer": customer, "receipt": receipt, "dispatch": dispatch, "payment": payment, "signoff": signoff,
@@ -770,7 +788,7 @@ def service_report_detail(job_id: str) -> dict:
 
 
 def service_overview() -> dict:
-    jobs_path = ROOT_DIR / "apps" / "service_operations" / "data" / "jobs.json"
+    jobs_path = _service_jobs_path()
     empty = {
         "available": False, "data_state": "waiting", "total_jobs": 0, "open_jobs": 0, "repairing": 0, "ready": 0,
         "pending_price": 0, "total_estimate": 0.0, "today_forms": 0, "this_month_forms": 0,
@@ -790,7 +808,7 @@ def service_overview() -> dict:
         branches_map = defaultdict(lambda: {"jobs": 0, "open": 0, "estimate": 0.0})
         recent = []
         for j in jobs:
-            bname = text(j.get("branchName"), "—")
+            bname = text(j.get("branchName"), "â€”")
             b = branches_map[bname]; b["jobs"] += 1; b["estimate"] += safe_float((j.get("totals") or {}).get("totalEstimate"))
             if text(j.get("status")) not in closed: b["open"] += 1
         _service_progress = {"DRAFT": 5, "RECEIVED": 15, "ESTIMATE_PENDING": 35, "APPROVAL_PENDING": 45, "REPAIRING": 65, "READY": 82, "DISPATCHED": 95, "CLOSED": 100}
@@ -803,9 +821,9 @@ def service_overview() -> dict:
             status = text(j.get("status"), "RECEIVED")
             recent.append({
                 "id": j.get("id"), "job_no": text(j.get("jobNo"), "Service Job"), "date": text(j.get("jobDate")),
-                "branch": text(j.get("branchName"), "—"), "customer": text(customer.get("name"), "—"),
-                "product": text(first.get("productName"), "—"), "model": text(first.get("makeModel"), "—"), "product_count": len(products),
-                "problem": text(first.get("complaint"), text(first.get("repairWork"), "—")), "repair_work": text(first.get("repairWork"), "—"),
+                "branch": text(j.get("branchName"), "â€”"), "customer": text(customer.get("name"), "â€”"),
+                "product": text(first.get("productName"), "â€”"), "model": text(first.get("makeModel"), "â€”"), "product_count": len(products),
+                "problem": text(first.get("complaint"), text(first.get("repairWork"), "â€”")), "repair_work": text(first.get("repairWork"), "â€”"),
                 "status": status, "current_stage": _service_stage.get(status, status.replace("_", " ").title()), "progress": _service_progress.get(status, 20),
                 "estimate": money((j.get("totals") or {}).get("totalEstimate")), "payment_mode": text(payment.get("mode"), text(payment.get("paymentMode"))),
                 "staff": staff[:6], "latest_person": staff[-1] if staff else "Not recorded",
@@ -880,7 +898,7 @@ def _build_process_status_payload() -> dict:
                         if latest_person not in staff: staff.insert(0, latest_person)
                     purchasing.append({
                         "id": o.get("id"), "order_id": text(o.get("order_name"), f"Order #{o.get('id')}"),
-                        "customer": text(o.get("customer_name"), "—"), "market_type": text(o.get("market_type"), "IND"),
+                        "customer": text(o.get("customer_name"), "â€”"), "market_type": text(o.get("market_type"), "IND"),
                         "branch": BRANCH_MAP.get(text(o.get("branch"), "MAIN"), text(o.get("branch"), "MAIN").title()),
                         "status": text(o.get("current_status"), "Draft"), "current_stage": current_stage,
                         "progress": round(done / max(1, len(PURCHASE_STAGES)) * 100), "staff": staff[:5],
@@ -892,7 +910,7 @@ def _build_process_status_payload() -> dict:
             pass
 
     servicing = []
-    jobs_path = ROOT_DIR / "apps" / "service_operations" / "data" / "jobs.json"
+    jobs_path = _service_jobs_path()
     if jobs_path.exists():
         try:
             jobs = sorted(_service_jobs(), key=lambda j: text(j.get("updatedAt")), reverse=True)[:150]
@@ -915,12 +933,12 @@ def _build_process_status_payload() -> dict:
                 products = j.get("products") or []; customer = j.get("customer") or {}
                 servicing.append({
                     "id": j.get("id"), "job_no": text(j.get("jobNo"), "Service Job"),
-                    "customer": text(customer.get("name"), "—"), "branch": text(j.get("branchName"), "—"),
+                    "customer": text(customer.get("name"), "â€”"), "branch": text(j.get("branchName"), "â€”"),
                     "status": status, "current_stage": stage_map.get(status, status.replace("_", " ").title()),
                     "progress": progress_map.get(status, 20), "staff": staff[:6],
                     "latest_person": staff[-1] if staff else "Not recorded",
                     "updated_at": text(j.get("updatedAt")),
-                    "product": text(products[0].get("productName") if products else "", "—"),
+                    "product": text(products[0].get("productName") if products else "", "â€”"),
                     "estimate": money((j.get("totals") or {}).get("totalEstimate")),
                 })
         except Exception:
@@ -988,10 +1006,10 @@ def _build_tasks_payload() -> dict:
                     if text(a.get("full_name")): latest=text(a.get("full_name"))
                     attention=wh>=48
                     priority="High" if attention else ("Normal" if wh>=12 else "Low")
-                    pitems.append({"id":o.get("id"),"source":"purchasing","record_no":text(o.get("order_name"),f"Order #{o.get('id')}"),"customer":text(o.get("customer_name"),"—"),"branch":BRANCH_MAP.get(text(o.get("branch"),"MAIN"),text(o.get("branch"),"MAIN").title()),"current_stage":stage,"status":status,"progress":progress,"responsible_team":stage,"assigned_to":latest,"priority":priority,"updated_at":text(o.get("updated_at")),"waiting_hours":wh,"needs_attention":attention,"action_path":f"/process/purchasing/{o.get('id')}"})
+                    pitems.append({"id":o.get("id"),"source":"purchasing","record_no":text(o.get("order_name"),f"Order #{o.get('id')}"),"customer":text(o.get("customer_name"),"â€”"),"branch":BRANCH_MAP.get(text(o.get("branch"),"MAIN"),text(o.get("branch"),"MAIN").title()),"current_stage":stage,"status":status,"progress":progress,"responsible_team":stage,"assigned_to":latest,"priority":priority,"updated_at":text(o.get("updated_at")),"waiting_hours":wh,"needs_attention":attention,"action_path":f"/process/purchasing/{o.get('id')}"})
             conn.close()
         except Exception: pass
-    jobs_path=ROOT_DIR/"apps"/"service_operations"/"data"/"jobs.json"
+    jobs_path=_service_jobs_path()
     if jobs_path.exists():
         try:
             jobs=_service_jobs()
@@ -1005,7 +1023,7 @@ def _build_tasks_payload() -> dict:
                 latest=staff[-1] if staff else ""; attention=wh>=48 or (status in {"ESTIMATE_PENDING","APPROVAL_PENDING"} and wh>=24)
                 priority="High" if attention else ("Normal" if wh>=12 else "Low")
                 customer=j.get("customer") or {}; products=j.get("products") or []
-                sitems.append({"id":j.get("id"),"source":"servicing","record_no":text(j.get("jobNo"),"Service Job"),"customer":text(customer.get("name"),"—"),"product":text(products[0].get("productName") if products else "","—"),"branch":text(j.get("branchName"),"—"),"current_stage":SERVICE_STAGE_MAP.get(status,status.replace("_"," ").title()),"status":status,"progress":SERVICE_PROGRESS_MAP.get(status,20),"responsible_team":SERVICE_STAGE_MAP.get(status,status.replace("_"," ").title()),"assigned_to":latest,"priority":priority,"updated_at":text(j.get("updatedAt")),"waiting_hours":wh,"needs_attention":attention,"action_path":f"/process/servicing/{j.get('id')}"})
+                sitems.append({"id":j.get("id"),"source":"servicing","record_no":text(j.get("jobNo"),"Service Job"),"customer":text(customer.get("name"),"â€”"),"product":text(products[0].get("productName") if products else "","â€”"),"branch":text(j.get("branchName"),"â€”"),"current_stage":SERVICE_STAGE_MAP.get(status,status.replace("_"," ").title()),"status":status,"progress":SERVICE_PROGRESS_MAP.get(status,20),"responsible_team":SERVICE_STAGE_MAP.get(status,status.replace("_"," ").title()),"assigned_to":latest,"priority":priority,"updated_at":text(j.get("updatedAt")),"waiting_hours":wh,"needs_attention":attention,"action_path":f"/process/servicing/{j.get('id')}"})
         except Exception: pass
     all_items=pitems+sitems
     return {"generated_at":datetime.now().isoformat(timespec="seconds"),"purchasing":pitems,"servicing":sitems,"summary":{"active":len(all_items),"waiting":sum(1 for x in all_items if x["waiting_hours"]>=12),"needs_attention":sum(1 for x in all_items if x["needs_attention"]),"completed_today":completed_today}}
@@ -1028,7 +1046,7 @@ def _build_activity_payload(limit=120) -> dict:
                     d=dict(r); items.append({"id":f"p-{d.get('id')}","source":"purchasing","record_id":d.get("order_id"),"record_no":text(d.get("order_name"),f"Order #{d.get('order_id')}"),"customer":text(d.get("customer_name")),"person":text(d.get("full_name"),"System / not recorded"),"department":text(d.get("section"),"Purchasing").title(),"action":text(d.get("action"),"Updated"),"detail":text(d.get("details")),"timestamp":text(d.get("created_at")),"kind":"audit"})
             conn.close()
         except Exception: pass
-    jobs_path=ROOT_DIR/"apps"/"service_operations"/"data"/"jobs.json"
+    jobs_path=_service_jobs_path()
     if jobs_path.exists():
         try:
             jobs=_service_jobs()
@@ -1036,7 +1054,7 @@ def _build_activity_payload(limit=120) -> dict:
                 sign=j.get("signoff") or {}; dispatch=j.get("dispatch") or {}; payment=j.get("payment") or {}
                 staff=[text(x) for x in [sign.get("receivedBy"),sign.get("inspectedBy"),sign.get("estimateConfirmedBy"),sign.get("repairedBy"),dispatch.get("testedBy"),payment.get("receivedBy")] if text(x)]
                 customer=j.get("customer") or {}; status=text(j.get("status"),"RECEIVED")
-                items.append({"id":f"s-{j.get('id')}-{text(j.get('updatedAt'))}","source":"servicing","record_id":j.get("id"),"record_no":text(j.get("jobNo"),"Service Job"),"customer":text(customer.get("name")),"person":staff[-1] if staff else "Not recorded","department":SERVICE_STAGE_MAP.get(status,"Servicing"),"action":f"Service job updated — {SERVICE_STAGE_MAP.get(status,status.replace('_',' ').title())}","detail":"Latest saved service-job activity. Detailed per-stage timestamps are not stored by the current Servicing source application.","timestamp":text(j.get("updatedAt")),"kind":"snapshot"})
+                items.append({"id":f"s-{j.get('id')}-{text(j.get('updatedAt'))}","source":"servicing","record_id":j.get("id"),"record_no":text(j.get("jobNo"),"Service Job"),"customer":text(customer.get("name")),"person":staff[-1] if staff else "Not recorded","department":SERVICE_STAGE_MAP.get(status,"Servicing"),"action":f"Service job updated â€” {SERVICE_STAGE_MAP.get(status,status.replace('_',' ').title())}","detail":"Latest saved service-job activity. Detailed per-stage timestamps are not stored by the current Servicing source application.","timestamp":text(j.get("updatedAt")),"kind":"snapshot"})
         except Exception: pass
     items.sort(key=lambda x: parse_dt(x.get("timestamp")) or datetime.min, reverse=True)
     return {"generated_at":datetime.now().isoformat(timespec="seconds"),"items":items[:limit],"source_counts":{"purchasing":sum(1 for x in items if x["source"]=="purchasing"),"servicing":sum(1 for x in items if x["source"]=="servicing")}}
@@ -1066,7 +1084,7 @@ def _build_team_payload() -> dict:
                         people[name]["purchasing_actions"]+=1; people[name]["purchasing_records"].add(r["order_id"])
             conn.close()
         except Exception: pass
-    jobs_path=ROOT_DIR/"apps"/"service_operations"/"data"/"jobs.json"
+    jobs_path=_service_jobs_path()
     if jobs_path.exists():
         try:
             jobs=_service_jobs()
@@ -1246,3 +1264,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
