@@ -1,6 +1,7 @@
 import { publicSettings } from '@/lib/public-settings';
 import { NextResponse } from 'next/server';
 import { getSettings, saveSettings } from '@/lib/db';
+import { normalizeGeminiModel } from '@/lib/gemini-model';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,7 +46,7 @@ export async function PUT(request: Request) {
       googleOAuthRefreshToken: oauthClientChanged ? '' : current.googleOAuthRefreshToken,
       googleOAuthEmail: oauthClientChanged ? '' : current.googleOAuthEmail,
       formVisionEnabled: body.formVisionEnabled !== false,
-      formVisionModel: String(body.formVisionModel || current.formVisionModel || 'gemini-2.5-flash'),
+      formVisionModel: normalizeGeminiModel(body.formVisionModel || current.formVisionModel),
       geminiApiKey: String(body.geminiApiKey || '').trim() ? String(body.geminiApiKey).trim() : current.geminiApiKey
     };
     return NextResponse.json({ settings: publicSettings(await saveSettings(next)) });

@@ -12,7 +12,7 @@ export async function GET() {
     {
       ok: true,
       product: "NUNES Company Platform",
-      version: "6.5.1",
+      version: "6.6.0",
       update_id: NUNES_ROLLOUT_ID,
       architecture: "Next.js",
       deployment: process.env.VERCEL ? "vercel" : "local-or-cloud-vm",

@@ -93,7 +93,7 @@ $ready = $false
 $seenId = ''
 while ((Get-Date) -lt $deadline) {
   try {
-    $h = Invoke-RestMethod -TimeoutSec 2 ('http://127.0.0.1:8785/api/health?_verify=' + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
+    $h = Invoke-RestMethod -TimeoutSec 2 ('http://127.0.0.1:8795/api/health?_verify=' + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
     if ($h.ok -eq $true -and [string]$h.product -eq 'NUNES Company Platform') {
       $seenId = [string]$h.update_id
       if ($seenId -eq $updateId) { $ready = $true; break }
@@ -106,7 +106,7 @@ if (-not $ready) {
 }
 
 Write-Host '[4/5] Confirming staff/owner Tailscale firewall access...' -ForegroundColor Cyan
-$ports = @(5055,5056,8770,8785) + @(8786..8795) + @(8865..8875)
+$ports = @(5055,5056,8770,8795)
 foreach ($port in ($ports | Sort-Object -Unique)) {
   $ruleName = "NUNES Operations TCP $port"
   try {
@@ -132,5 +132,5 @@ Write-Host 'Open dashboards detect this rollout automatically and refresh themse
 Write-Host 'Closed PCs receive the latest version the next time they open NUNES Operations.' -ForegroundColor Green
 Write-Host 'Port 8765 was not assigned to this NUNES server.' -ForegroundColor Green
 
-try { Start-Process 'http://127.0.0.1:8785' } catch {}
+try { Start-Process 'http://127.0.0.1:8795' } catch {}
 exit 0

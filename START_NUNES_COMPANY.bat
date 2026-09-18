@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title NUNES Company Platform V6.5.0 - Fast Office Server
+title NUNES Company Platform - Fixed Port 8795
 pushd "%~dp0" >nul 2>&1
 if errorlevel 1 (echo ERROR: Cannot open this folder.& if /I not "%NUNES_NO_BROWSER%"=="1" pause & exit /b 1)
 set "ROOT=%CD%"
@@ -29,7 +29,7 @@ set "STATUSFILE=%STATE_DIR%\server-status.txt"
 set "NEXT_TELEMETRY_DISABLED=1"
 cls
 echo ============================================================
-echo        NUNES COMPANY PLATFORM V6.5.0 - FAST SERVER
+echo        NUNES COMPANY PLATFORM - FIXED 8795 FAST SERVER
 echo ============================================================
 echo Shared dashboard + Purchasing + Servicing
 echo.
@@ -51,7 +51,7 @@ if defined EXISTING_PLATFORM if defined EXISTING_API (
 
 rem If a half-running current/older dashboard exists, restart only the main
 rem dashboard so it reconnects to the exact data API selected below.
-for %%Q in (8785 8786 8787 8788 8789 8790 8791 8792 8793 8794 8795) do (
+for %%Q in (8795) do (
   powershell -NoProfile -Command "try{$r=Invoke-RestMethod -TimeoutSec 1 http://127.0.0.1:%%Q/api/health;if($r.ok -eq $true -and [string]$r.product -eq 'NUNES Company Platform'){exit 0}}catch{};exit 1" >nul 2>&1
   if not errorlevel 1 (
     set "OLDPID="
@@ -139,17 +139,18 @@ set "NUNES_API_PORT=!APIPORT!"
 set "NUNES_API_INTERNAL_URL=http://127.0.0.1:!APIPORT!"
 set "NUNES_HOST=0.0.0.0"
 
-rem Keep the dashboard URL stable on the new main-server port range, starting at 8785.
-set "PORT="
-for %%Q in (8785 8786 8787 8788 8789 8790 8791 8792 8793 8794 8795) do (
-  if not defined PORT (
-    set "USED="
-    for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R /C:":%%Q .*LISTENING"') do set "USED=%%P"
-    if not defined USED set "PORT=%%Q"
-  )
+rem V6.5.15: dashboard is intentionally FIXED to TCP 8795.
+rem Never fall back to 8765 or any other dashboard port because those may belong to other projects.
+set "PORT=8795"
+set "USED="
+for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R /C:":8795 .*LISTENING"') do set "USED=%%P"
+if defined USED (
+  echo ERROR: TCP 8795 is already in use by PID !USED!.
+  >"%STATUSFILE%" echo ERROR - TCP 8795 is already in use by another process.
+  if /I not "%NUNES_NO_BROWSER%"=="1" pause
+  exit /b 1
 )
-if not defined PORT (echo ERROR: No free dashboard port.& >"%STATUSFILE%" echo ERROR - No free dashboard port.& if /I not "%NUNES_NO_BROWSER%"=="1" pause & exit /b 1)
-set "NUNES_PORT=!PORT!"
+set "NUNES_PORT=8795"
 
 rem V6.5.0: platform packages/build are stored once in LOCALAPPDATA and reused by
 rem future ZIP updates. If this ZIP contains a verified prebuild, no Next build occurs.

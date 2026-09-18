@@ -1,0 +1,11 @@
+NUNES Operations Workspace V6.5.8
+
+Fixes:
+1. Publish and Git-save scripts now refuse to run from a patch/incomplete folder BEFORE any git init/reset/staging.
+2. Full-source validation requires the dashboard, servicing app, order forms and live-update script.
+3. apps/order_forms/data/.keep and apps/service_operations/data/.gitkeep are allowed as empty Git placeholders; real data remains blocked.
+4. GitHub auto-watcher allows only those exact two placeholder files inside protected data folders.
+5. Fresh Git bootstrap no longer prints a frightening deletion list during the mixed reset that attaches the extracted full source to origin/main.
+6. Existing secret/data protections remain active.
+
+Use only the FULL V6.5.8 folder as the permanent master folder. Do not run J_PUBLISH from a small patch folder.

@@ -39,3 +39,6 @@ server-startup.log
 .vscode/*.local.json
 Thumbs.db
 Desktop.ini
+
+# NUNES safety additions
+# NUNES local-only safety

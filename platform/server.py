@@ -32,8 +32,8 @@ VERSION = "6.5.0"
 DATA_API_TOKEN = os.environ.get("NUNES_DATA_API_TOKEN", "").strip()
 BROWSER_ORIGINS = {
     "https://nunes-operations-workspace.vercel.app",
-    "http://127.0.0.1:8785",
-    "http://localhost:8785",
+    "http://127.0.0.1:8795",
+    "http://localhost:8795",
 }
 for _origin in os.environ.get("NUNES_BROWSER_ORIGINS", "").split(","):
     _origin = _origin.strip().rstrip("/")

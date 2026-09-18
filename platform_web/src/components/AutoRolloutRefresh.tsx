@@ -8,7 +8,7 @@ export default function AutoRolloutRefresh() {
     let stopped = false;
     let timer: number | undefined;
 
-    const schedule = (delay = 10000) => {
+    const schedule = (delay = 5000) => {
       if (!stopped) timer = window.setTimeout(checkForUpdate, delay);
     };
 
@@ -44,7 +44,7 @@ export default function AutoRolloutRefresh() {
     };
 
     document.addEventListener("visibilitychange", onVisibility);
-    schedule(3500);
+    schedule(1800);
     return () => {
       stopped = true;
       document.removeEventListener("visibilitychange", onVisibility);

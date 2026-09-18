@@ -3,7 +3,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$Version = '6.5.0'
+$Version = '6.6.0'
 $StateDir = Join-Path $env:LOCALAPPDATA 'NUNES Operations'
 $RootFile = Join-Path $StateDir 'workspace-root.txt'
 $ClientFile = Join-Path $StateDir 'client-server-url.txt'
@@ -69,7 +69,7 @@ function Get-Health([string]$BaseUrl, [int]$TimeoutMs = 700) {
 }
 
 function Find-LocalServer {
-  foreach ($p in @(8785,8786,8787,8788,8789,8790,8791,8792,8793,8794,8795)) {
+  foreach ($p in @(8795)) {
     $u = "http://127.0.0.1:$p"
     if (Get-Health $u 350) { return $u }
   }
@@ -151,99 +151,32 @@ try {
     }
   } catch {}
 
-  # FAST OPEN V8: first use the fixed local resident dashboard port. In normal daily
-  # use this makes the desktop icon open in a fraction of a second and avoids scanning
-  # ten possible ports. If the resident is not running yet, start it directly from
-  # LOCALAPPDATA and poll only the expected port for a few seconds.
-  $fastUrl = 'http://127.0.0.1:8785'
-  if (Get-Health $fastUrl 180) { Open-Dashboard $fastUrl; Start-Sleep -Milliseconds 120; exit 0 }
-  try {
-    $companyResident = Join-Path $StateDir 'CompanyResident\start-company-resident.ps1'
-    if (Test-Path -LiteralPath $companyResident -PathType Leaf) {
-      Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-WindowStyle','Hidden','-ExecutionPolicy','Bypass','-File',$companyResident) -WindowStyle Hidden | Out-Null
-      $fastDeadline = [DateTime]::UtcNow.AddSeconds(6)
-      while ([DateTime]::UtcNow -lt $fastDeadline) {
-        if (Get-Health $fastUrl 150) { Open-Dashboard $fastUrl; Start-Sleep -Milliseconds 120; exit 0 }
-        Start-Sleep -Milliseconds 90
-      }
-    }
-  } catch { Write-Log ('Fast resident start unavailable: ' + $_.Exception.Message) }
+  # V6.5.10 FAST/RELIABLE OPEN: the dashboard should normally already be hot.
+  # If Windows restarted/killed it, use the tiny resident recovery helper first.
+  $fastUrl = 'http://127.0.0.1:8795'
+  if (Get-Health $fastUrl 160) { Open-Dashboard $fastUrl; Start-Sleep -Milliseconds 80; exit 0 }
 
-  # Server PC: resolve the workspace root from the stable LocalAppData pointer.
+  # Server PC: resolve the CURRENT workspace root from the stable LocalAppData pointer.
   if ([string]::IsNullOrWhiteSpace($Root) -and (Test-Path -LiteralPath $RootFile)) {
     $Root = (Get-Content -LiteralPath $RootFile -Raw -ErrorAction Stop).Trim()
   }
-  if ([string]::IsNullOrWhiteSpace($Root)) { Fail 'The NUNES workspace folder is not configured. Run 1_SETUP_ALWAYS_ON_SERVER.bat once from the extracted NUNES folder.' }
+  if ([string]::IsNullOrWhiteSpace($Root)) { Fail 'The NUNES workspace folder is not configured. Run 0_REPAIR_AND_START_MAIN_SERVER.bat once from the complete NUNES folder.' }
   $Root = [Environment]::ExpandEnvironmentVariables($Root).Trim().Trim([char]34).Trim([char]39)
-  if (-not (Test-Path -LiteralPath $Root -PathType Container)) { Fail "The saved NUNES workspace folder no longer exists:`n$Root`n`nRun 1_SETUP_ALWAYS_ON_SERVER.bat from the current extracted folder to update it." $Root }
+  if (-not (Test-Path -LiteralPath $Root -PathType Container)) { Fail "The saved NUNES workspace folder no longer exists:`n$Root`n`nRun 0_REPAIR_AND_START_MAIN_SERVER.bat from the current complete NUNES folder." $Root }
 
-  $existing = Find-LocalServer
-  if ($existing) { Open-Dashboard $existing; Start-Sleep -Milliseconds 350; exit 0 }
+  Write-Host 'Server was sleeping. Restoring the fast resident...' -ForegroundColor Yellow
+  Write-Log ('Fast recovery requested from ' + $Root)
+  $ensure = Join-Path $Root 'tools\ensure-main-server-ready.ps1'
+  if (-not (Test-Path -LiteralPath $ensure -PathType Leaf)) { Fail "Fast recovery helper is missing:`n$ensure`n`nUse the V6.6.0 complete folder and run 0_REPAIR_AND_START_MAIN_SERVER.bat once." $Root }
 
-  Write-Host 'Server is not running. Starting NUNES now...' -ForegroundColor Yellow
-  Write-Log ('Starting server from ' + $Root)
-  Remove-Item -LiteralPath $StatusFile -Force -ErrorAction SilentlyContinue
-
-  $taskStarted = $false
-  try {
-    $null = Get-ScheduledTask -TaskName 'NUNES Company Server' -ErrorAction Stop
-    Start-ScheduledTask -TaskName 'NUNES Company Server' -ErrorAction Stop
-    $taskStarted = $true
-    Write-Host 'Always-on server task started.' -ForegroundColor Gray
-    Write-Log 'Scheduled task started.'
-  } catch { Write-Log ('Scheduled task start unavailable: ' + $_.Exception.Message) }
-
-  if (-not $taskStarted) {
-    Write-Host 'Starting server directly...' -ForegroundColor Gray
-    Start-DirectServer $Root
+  & powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File $ensure -Root $Root -TimeoutSeconds 90 -Quiet
+  if ($LASTEXITCODE -eq 0 -and (Get-Health $fastUrl 500)) {
+    Write-Host 'Server is ready.' -ForegroundColor Green
+    Open-Dashboard $fastUrl
+    Start-Sleep -Milliseconds 100
+    exit 0
   }
 
-  # First preparation can involve a one-time npm build. Do not fail at 150 seconds
-  # while valid work is still progressing; show the real stage instead.
-  $deadline = (Get-Date).AddMinutes(8)
-  $lastStatus=''
-  $lastProgress=Get-Date
-  $fallbackUsed=$false
-  $startTime=Get-Date
-  while ((Get-Date) -lt $deadline) {
-    $url = Find-LocalServer
-    if ($url) {
-      Write-Host ''
-      Write-Host 'Server is ready.' -ForegroundColor Green
-      Open-Dashboard $url
-      Start-Sleep -Milliseconds 500
-      exit 0
-    }
-
-    $status=''
-    try { if(Test-Path -LiteralPath $StatusFile){ $status=(Get-Content -LiteralPath $StatusFile -Raw -ErrorAction Stop).Trim() } } catch {}
-    if($status -and $status -ne $lastStatus){
-      Write-Host ''
-      if($status.StartsWith('ERROR')){ Write-Host $status -ForegroundColor Red } else { Write-Host $status -ForegroundColor Cyan }
-      Write-Log ('Server status: ' + $status)
-      $lastStatus=$status; $lastProgress=Get-Date
-      if($status.StartsWith('ERROR')){ Fail $status $Root }
-    }
-
-    # If the scheduled task exited almost immediately without a working server,
-    # try the same launcher directly once. This also covers task/quote problems.
-    if($taskStarted -and -not $fallbackUsed -and ((Get-Date)-$startTime).TotalSeconds -ge 12){
-      try {
-        $state=[string](Get-ScheduledTask -TaskName 'NUNES Company Server' -ErrorAction Stop).State
-        if($state -ne 'Running'){
-          Write-Host ''
-          Write-Host 'Scheduled start ended before the dashboard was ready. Trying direct recovery...' -ForegroundColor Yellow
-          Start-DirectServer $Root
-          $fallbackUsed=$true
-          $startTime=Get-Date
-        }
-      } catch {}
-    }
-
-    if(((Get-Date)-$lastProgress).TotalSeconds -ge 20){ Write-Host -NoNewline '.'; $lastProgress=Get-Date }
-    Start-Sleep -Milliseconds 650
-  }
-
-  Fail "The server did not become ready after the recovery wait.`n`nThe latest startup lines are shown below. Your Purchasing and Servicing data has not been deleted." $Root
+  Fail "The main server could not be restored automatically.`n`nRun 0_REPAIR_AND_START_MAIN_SERVER.bat as Administrator from the CURRENT full NUNES folder. V6.6.0 will rebind the resident/tasks to that exact folder and keeps your existing data/connections." $Root
 }
 catch { Fail $_.Exception.Message $Root }

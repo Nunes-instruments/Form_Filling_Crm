@@ -1,25 +1,45 @@
-NUNES - SIMPLE DAILY USE
-========================
-MAIN SERVER PC - FIRST TIME ONLY:
-  0_FIRST_TIME_VSCODE_MAIN_SERVER.bat
+NUNES V6.6.0 - SIMPLE GITHUB SINGLE SOURCE
+==========================================
 
-GITHUB - ONE TIME ONLY AFTER YOU CREATE A PRIVATE EMPTY REPO:
-  1_CONNECT_GITHUB_PRIVATE_REPO.bat
+USE ONLY THESE FILES FOR NORMAL SETUP/UPDATES:
 
-AFTER ANY VS CODE CHANGE:
-  F_APPLY_VSCODE_CHANGES_LIVE.bat
-  (or in VS Code press Ctrl+Shift+B)
+1) 0_NUNES_ALL_IN_ONE_SETUP.bat
+   Run this on EVERY PC and choose its role:
+   MAIN SERVER / OWNER / STAFF.
 
-AFTER YOU CONFIRM THE CHANGE WORKS:
-  G_SAVE_TO_GITHUB.bat
+2) 1_PUSH_GITHUB_AND_GO_LIVE.bat
+   Use on the MAIN SERVER / development folder after VS Code changes.
+   It applies the code live, commits safely, and pushes to GitHub main.
 
-STAFF / OWNER PC - FIRST TIME ONLY:
-  3_CONNECT_THIS_PC_TO_SHARED_SERVER.bat
+3) 2_CHECK_GITHUB_AUTO_UPDATE.bat
+   Use on MAIN SERVER to confirm server + GitHub auto-pull status.
 
-NORMAL STAFF / OWNER DAILY USE:
-  Desktop -> NUNES Operations
+ARCHITECTURE
+------------
+GitHub main
+   -> MAIN SERVER automatically checks every 1 minute
+   -> new commit is fast-forwarded, built, verified, and applied
+   -> owner/staff open the SAME main-server web app from their Desktop icon
+   -> already-open pages detect the new rollout and refresh themselves
 
-MAIN SERVER URL:
-  http://100.97.196.17:8785
+OWNER/STAFF PCs DO NOT KEEP A COPY OF THE APPLICATION SOURCE.
+This is intentional: there is nothing to copy/update on 10 staff PCs.
+Their permanent Desktop icon always opens the latest version served by MAIN SERVER.
 
-DO NOT RUN server setup BAT files on staff PCs.
+PORTS
+-----
+Main dashboard : 8795
+Purchasing     : 8770
+Servicing      : 5055
+WhatsApp       : 5056
+8765           : UNTOUCHED / belongs to another project
+
+MAIN SERVER local URL:
+http://127.0.0.1:8795
+
+OWNER/STAFF Tailscale URL:
+http://100.97.196.17:8795
+
+GitHub repository:
+https://github.com/Nunes-instruments/Form_Filling_Crm.git
+Branch: main

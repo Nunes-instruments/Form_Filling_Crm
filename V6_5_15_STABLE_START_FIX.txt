@@ -1,0 +1,7 @@
+V6.5.15 STABLE START FIX
+- Main dashboard 8795 is prepared before Servicing and WhatsApp.
+- Servicing/WhatsApp preparation failures no longer abort the main server setup.
+- Critical installation verification checks 8795 independently of optional modules.
+- Added 5_REPAIR_SERVICING_WHATSAPP.bat to retry only ports 5055/5056.
+- Existing Purchasing/Servicing data, Google tokens and WhatsApp profile are preserved.
+- Port 8765 remains untouched; port 8785 is not used.

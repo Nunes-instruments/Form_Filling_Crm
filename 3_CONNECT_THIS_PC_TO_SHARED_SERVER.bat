@@ -6,7 +6,7 @@ cls
 echo ============================================================
 echo       NUNES STAFF / OWNER - ONE TIME CONNECTION
 echo ============================================================
-set "DEFAULT_URL=http://100.97.196.17:8785"
+set "DEFAULT_URL=http://100.97.196.17:8795"
 echo Main server: %DEFAULT_URL%
 echo.
 

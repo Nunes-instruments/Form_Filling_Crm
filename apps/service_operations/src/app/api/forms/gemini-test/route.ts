@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSettings } from '@/lib/db';
+import { normalizeGeminiModel } from '@/lib/gemini-model';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,7 +10,7 @@ export async function POST() {
     const settings = await getSettings();
     const apiKey = String(settings.geminiApiKey || process.env.GEMINI_API_KEY || '').trim();
     if (!apiKey) return NextResponse.json({ ok:false, error:'Gemini API key is not configured.' }, { status:428 });
-    const model = String(settings.formVisionModel || 'gemini-2.5-flash').trim();
+    const model = normalizeGeminiModel(settings.formVisionModel);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 12000);
     let response: Response;
@@ -17,7 +18,7 @@ export async function POST() {
       response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
         method:'POST',
         headers:{ 'Content-Type':'application/json', 'x-goog-api-key':apiKey },
-        body:JSON.stringify({ contents:[{ parts:[{ text:'Reply with exactly OK.' }] }], generationConfig:{ temperature:0, maxOutputTokens:8 } }),
+        body:JSON.stringify({ contents:[{ parts:[{ text:'Reply with exactly OK.' }] }], generationConfig:{ maxOutputTokens:8 } }),
         signal:controller.signal
       });
     } finally { clearTimeout(timer); }

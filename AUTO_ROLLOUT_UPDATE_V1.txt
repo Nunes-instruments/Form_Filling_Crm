@@ -6,4 +6,4 @@ AUTO ROLLOUT UPDATE V1
 - Staff/owner PCs do not need future ZIP copies after the one-time shared-server connection.
 - Persistent company data is backed up before an update.
 - Existing Gmail/WhatsApp/purchasing/servicing workflows were not intentionally changed.
-- NUNES continues to use dashboard port 8785; port 8765 is left for the user's other project.
+- NUNES continues to use dashboard port 8795; port 8765 is left for the user's other project.

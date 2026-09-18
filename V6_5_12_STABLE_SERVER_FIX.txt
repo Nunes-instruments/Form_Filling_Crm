@@ -1,0 +1,46 @@
+NUNES OPERATIONS WORKSPACE V6.5.12 - STABLE SERVER ROOT FIX
+===========================================================
+
+Problem fixed
+-------------
+A newer extracted NUNES folder could refresh the Desktop shortcut while the
+prepared CompanyResident / scheduled tasks still pointed at an older folder.
+The dashboard might work for a while, then fail to restore after the older
+folder was removed or Windows restarted.
+
+V6.5.12 changes
+---------------
+1. One-time repair now verifies that workspace-root.txt, CompanyResident config,
+   scheduled tasks and runtime files are bound to THIS exact full folder.
+2. If the folder changed, the repair does not incorrectly take the fast-skip path;
+   it rebinds the resident/tasks/shortcut to the current folder.
+3. workspace-root.txt is written early during full setup, before task repair.
+4. Daily Desktop recovery ignores a stale CompanyResident and starts from the
+   current configured master folder instead.
+5. Daily recovery waits longer only when a real rebuild/start is required.
+6. N_CHECK_SERVER_NOW.bat shows port 8795, health, prepared root, tasks and logs.
+7. Purchasing/Servicing data, Gmail tokens and WhatsApp local session are not
+   intentionally deleted by this repair.
+
+FIRST / REPAIR USE
+------------------
+Run as Administrator:
+  0_REPAIR_AND_START_MAIN_SERVER.bat
+
+DAILY USE
+---------
+Double-click Desktop:
+  NUNES Operations
+
+STATUS / TROUBLESHOOT
+---------------------
+Run:
+  N_CHECK_SERVER_NOW.bat
+
+URLs
+----
+Main server: http://127.0.0.1:8795
+Staff/Owner: http://100.97.196.17:8795
+Servicing: http://127.0.0.1:5055
+WhatsApp: http://127.0.0.1:5056
+Port 8765 is intentionally not used by this workspace.

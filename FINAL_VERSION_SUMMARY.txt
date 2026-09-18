@@ -1,0 +1,16 @@
+V6.5.4 FINAL FULL combines the complete V6.5.3 single-source application with the V6.5.4 one-click master/watcher repair.
+
+Included final architecture:
+- One main source folder on the main server PC
+- VS Code editing in that same folder
+- GitHub repository fixed to Nunes-instruments/Form_Filling_Crm
+- Live publish script: J_PUBLISH_LIVE_AND_GITHUB.bat
+- GitHub auto watcher: checks main every 1 minute
+- Staff/owner connect only to the main server
+- Browser rollout/refresh support remains in the application
+- Tailscale staff access support
+- Dashboard 8795; service 5055; WhatsApp 5056; purchasing 8770
+- Port 8765 left untouched
+- Existing data/secrets excluded from Git and not intentionally deleted by update scripts
+- V6.5.2 Windows path quoting fix retained
+- V6.5.4 repair launcher can locate the real Git master if run from a separate folder

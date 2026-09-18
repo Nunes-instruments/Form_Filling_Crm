@@ -2,7 +2,7 @@
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 set "PORT="
-for %%Q in (8785 8786 8787 8788 8789 8790 8791 8792 8793 8794 8795) do (
+for %%Q in (8795) do (
   if not defined PORT (
     powershell -NoProfile -Command "try{$r=Invoke-RestMethod -TimeoutSec 1 http://127.0.0.1:%%Q/api/health;if($r.ok -eq $true -and [string]$r.product -eq 'NUNES Company Platform'){exit 0}}catch{};exit 1" >nul 2>&1
     if not errorlevel 1 set "PORT=%%Q"

@@ -7,7 +7,7 @@ ONE-TIME ON MAIN SERVER PC
 
 ONE-TIME ON EACH STAFF / OWNER CLIENT PC
 - Run 3_CONNECT_THIS_PC_TO_SHARED_SERVER.bat.
-- Default server: http://100.97.196.17:8785
+- Default server: http://100.97.196.17:8795
 - After this, use only the NUNES Operations desktop shortcut.
 
 EVERY FUTURE UPDATE
@@ -26,7 +26,7 @@ WHAT HAPPENS AUTOMATICALLY
 - Closed staff/owner PCs receive the newest version the next time NUNES Operations is opened.
 
 PORTS
-- Dashboard: 8785
+- Dashboard: 8795
 - Servicing: 5055
 - WhatsApp: 5056
 - Purchasing: 8770

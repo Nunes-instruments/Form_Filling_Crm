@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSettings } from '@/lib/db';
 import { parseHandwrittenServiceForm } from '@/lib/form-import';
+import { normalizeGeminiModel } from '@/lib/gemini-model';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -90,7 +91,7 @@ export async function POST(request:Request) {
     const file = parseDataUrl(body?.fileDataUrl);
     if (!file) return NextResponse.json({ error:'Service-form image/PDF is missing, unsupported, or too large. Use JPG, PNG, WEBP or PDF under about 12 MB.' }, { status:400 });
 
-    const model = String(settings.formVisionModel || process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
+    const model = normalizeGeminiModel(settings.formVisionModel || process.env.GEMINI_MODEL);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
     let response:Response;
@@ -104,8 +105,6 @@ export async function POST(request:Request) {
             { text:PROMPT }
           ] }],
           generationConfig:{
-            temperature:0.05,
-            topP:0.8,
             maxOutputTokens:3500,
             responseMimeType:'application/json',
             responseSchema:RESPONSE_SCHEMA

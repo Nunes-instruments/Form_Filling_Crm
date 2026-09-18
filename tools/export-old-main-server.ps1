@@ -27,7 +27,7 @@ function Stop-NunesListener([int]$Port){
     }
   }catch{}
 }
-foreach($p in @(5055,5056,8770,8765,8766,8767,8768,8769,8771,8772,8773,8774,8775,8785,8786,8787,8788,8789,8790,8791,8792,8793,8794,8795,8865,8866,8867,8868,8869,8870,8871,8872,8873,8874,8875)){Stop-NunesListener $p}
+foreach($p in @(5055,5056,8770,8795,8865)){Stop-NunesListener $p}
 Start-Sleep -Milliseconds 400
 
 function Copy-Folder([string]$Source,[string]$Dest,[string]$Label){

@@ -14,20 +14,49 @@ $sharedData = Join-Path $stateRoot 'ServiceData'
 $runtimeBase = Join-Path $stateRoot 'ServicingRuntimeV5'
 New-Item -ItemType Directory -Force -Path $stateRoot,$residentDir,$sharedData,$runtimeBase | Out-Null
 
-$sourceSig = (Get-Content -LiteralPath (Join-Path $sourceApp 'SOURCE_SIGNATURE.txt') -Raw).Trim()
-if ([string]::IsNullOrWhiteSpace($sourceSig)) { throw 'Servicing source signature is missing.' }
+# Read the source signature defensively. Older package/setup combinations could accidentally
+# leave extra command-line text or hidden characters in SOURCE_SIGNATURE.txt. Using that raw
+# value as a folder name makes Test-Path throw "Illegal characters in path". V6.5.13 never
+# trusts the signature as a Windows path segment until it has been normalized.
+$signatureFile = Join-Path $sourceApp 'SOURCE_SIGNATURE.txt'
+$sourceSigRaw = ''
+try { $sourceSigRaw = [string](Get-Content -LiteralPath $signatureFile -Raw -ErrorAction Stop) }
+catch { throw 'Servicing source signature is missing or unreadable.' }
+if ([string]::IsNullOrWhiteSpace($sourceSigRaw)) { throw 'Servicing source signature is missing.' }
+$sourceSigCandidate = (($sourceSigRaw -replace "`0", '').Trim() -split "`r?`n")[0].Trim()
+if ($sourceSigCandidate -match '^[0-9A-Fa-f]{40,128}$') {
+  $sourceSig = $sourceSigCandidate.ToLowerInvariant()
+} else {
+  Write-Host '[Servicing] Repairing a malformed source signature into a safe local runtime key.' -ForegroundColor Yellow
+  $sha256 = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $sigBytes = [System.Text.Encoding]::UTF8.GetBytes($sourceSigRaw)
+    $sourceSig = ([System.BitConverter]::ToString($sha256.ComputeHash($sigBytes))).Replace('-', '').ToLowerInvariant()
+  } finally { $sha256.Dispose() }
+}
+
+function Test-SafeFile([string]$Path) {
+  try { return (-not [string]::IsNullOrWhiteSpace($Path)) -and [System.IO.File]::Exists($Path) } catch { return $false }
+}
+function Test-SafeDirectory([string]$Path) {
+  try { return (-not [string]::IsNullOrWhiteSpace($Path)) -and [System.IO.Directory]::Exists($Path) } catch { return $false }
+}
+
 # Use only an exact-source, complete resident already prepared on this owner PC.
 $configFile = Join-Path $residentDir 'servicing-resident.json'
 $previous = $null
 try { $previous = Get-Content -LiteralPath $configFile -Raw | ConvertFrom-Json } catch { }
 if ($previous -and [string]$previous.sourceSignature -eq $sourceSig) {
   $existingApp = [string]$previous.runtimeApp
-  $complete = (Test-Path -LiteralPath ([string]$previous.nodeExe) -PathType Leaf) -and
-    (Test-Path -LiteralPath ([string]$previous.serverEntry) -PathType Leaf) -and
-    (Test-Path -LiteralPath (Join-Path $existingApp '.next\BUILD_ID')) -and
-    (Test-Path -LiteralPath (Join-Path $existingApp '.next\routes-manifest.json')) -and
-    (Test-Path -LiteralPath (Join-Path $existingApp '.next\prerender-manifest.json')) -and
-    (Test-Path -LiteralPath (Join-Path $existingApp 'data\jobs.json'))
+  $complete = $false
+  try {
+    $complete = (Test-SafeFile ([string]$previous.nodeExe)) -and
+      (Test-SafeFile ([string]$previous.serverEntry)) -and
+      (Test-SafeFile (Join-Path $existingApp '.next\BUILD_ID')) -and
+      (Test-SafeFile (Join-Path $existingApp '.next\routes-manifest.json')) -and
+      (Test-SafeFile (Join-Path $existingApp '.next\prerender-manifest.json')) -and
+      (Test-SafeFile (Join-Path $existingApp 'data\jobs.json'))
+  } catch { $complete = $false }
   if ($complete) {
     Write-Host '[Servicing] Exact application build already prepared; skipping install, copy and build.' -ForegroundColor Green
     Copy-Item -LiteralPath (Join-Path $Root 'tools\start-servicing-resident.ps1') -Destination (Join-Path $residentDir 'start-servicing-resident.ps1') -Force
@@ -38,12 +67,16 @@ if ($previous -and [string]$previous.sourceSignature -eq $sourceSig) {
 }
 Write-Host '[Servicing] Preparing a new local application build. Existing data stays in ServiceData.' -ForegroundColor Cyan
 
-$runtimeRoot = Join-Path $runtimeBase $sourceSig
-$runtimeApp = Join-Path $runtimeRoot 'apps\service_operations'
-$runtimeTools = Join-Path $runtimeRoot 'tools'
-$mirrorMarker = Join-Path $runtimeRoot '.mirror-v5.ready'
+# The runtime key is guaranteed to contain only hexadecimal characters. Keep the existing
+# 64-character key format so prepared runtimes remain deterministic and Windows-safe.
+$runtimeKey = if ($sourceSig.Length -gt 64) { $sourceSig.Substring(0,64) } else { $sourceSig }
+$runtimeRoot = [System.IO.Path]::Combine($runtimeBase, $runtimeKey)
+$runtimeApp = [System.IO.Path]::Combine($runtimeRoot, 'apps', 'service_operations')
+$runtimeTools = [System.IO.Path]::Combine($runtimeRoot, 'tools')
+$mirrorMarker = [System.IO.Path]::Combine($runtimeRoot, '.mirror-v5.ready')
+try { [void][System.IO.Path]::GetFullPath($mirrorMarker) } catch { throw 'Could not create a safe Servicing runtime path.' }
 
-$needMirror = -not (Test-Path -LiteralPath $mirrorMarker) -or -not (Test-Path -LiteralPath (Join-Path $runtimeApp 'START_EMBEDDED_FAST.bat')) -or -not (Test-Path -LiteralPath (Join-Path $runtimeApp 'src'))
+$needMirror = -not (Test-SafeFile $mirrorMarker) -or -not (Test-SafeFile (Join-Path $runtimeApp 'START_EMBEDDED_FAST.bat')) -or -not (Test-SafeDirectory (Join-Path $runtimeApp 'src'))
 if ($needMirror) {
   New-Item -ItemType Directory -Force -Path $runtimeApp,$runtimeTools | Out-Null
   & robocopy.exe $sourceApp $runtimeApp /E /XD data node_modules .next logs /NFL /NDL /NJH /NJS /NP /R:1 /W:1 | Out-Null
@@ -84,7 +117,7 @@ if (-not $junctionOk) {
 # Prepare one reusable Node runtime and remember its exact executable so daily starts
 # never search PATH, recurse directories, download Node, or invoke the main NUNES launcher.
 $nodeExe = ''
-if ($previous -and (Test-Path -LiteralPath ([string]$previous.nodeExe) -PathType Leaf)) {
+if ($previous -and (Test-SafeFile ([string]$previous.nodeExe))) {
   try {
     $major = [int](& ([string]$previous.nodeExe) -p "Number(process.versions.node.split('.')[0])")
     if ($major -ge 20) { $nodeExe = [string]$previous.nodeExe }

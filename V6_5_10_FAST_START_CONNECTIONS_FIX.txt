@@ -1,0 +1,19 @@
+NUNES Operations V6.5.10 - FAST START + CONNECTIONS RECOVERY
+
+Purpose
+- Keep the main dashboard always ready on 8795.
+- Make the Desktop shortcut open immediately when the resident is already hot.
+- If Windows killed/restarted the server, restore the fast resident first without rebuilding.
+- Preserve existing Purchasing/Servicing data, Gmail OAuth/token state and WhatsApp browser profile.
+- Keep Servicing hot on 5055 and WhatsApp resident on 5056.
+- Keep TCP 8765 untouched for the user's other project.
+
+ONE TIME ON MAIN SERVER
+Run 0_REPAIR_AND_START_MAIN_SERVER.bat as Administrator.
+
+NORMAL DAILY USE
+Double-click NUNES Operations on the Desktop.
+The always-on and keepalive tasks keep the server ready; the shortcut has a fast recovery path if needed.
+
+CHECK
+Run M_CHECK_MAIN_SERVER_AND_CONNECTIONS.bat.

@@ -1,0 +1,9 @@
+NUNES Operations Workspace V6.5.7
+FINAL .env.example Git safety fix
+
+Fix:
+- platform_web/.env.example is a safe blank configuration TEMPLATE and is allowed in Git.
+- Real .env, .env.local, .env.production, OAuth JSON, tokens, databases and company data remain blocked.
+- Fresh extracted folders can attach to Nunes-instruments/Form_Filling_Crm and continue publishing.
+- J_PUBLISH_LIVE_AND_GITHUB.bat and G_SAVE_TO_GITHUB.bat now use an exact PowerShell staged-file safety check instead of broad findstr matching.
+- No Purchasing, Servicing, Gmail, WhatsApp or business workflow logic was changed.

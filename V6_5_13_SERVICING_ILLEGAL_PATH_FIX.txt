@@ -1,0 +1,11 @@
+NUNES Operations V6.5.13 - Servicing Illegal Path Fix
+
+Fixes the setup failure:
+  Test-Path : Illegal characters in path
+  prepare-servicing-resident.ps1 / $mirrorMarker
+
+The Servicing source signature is now validated before it is used as a local runtime folder name.
+Malformed/legacy signature contents are converted to a safe SHA-256 runtime key. Existing company data,
+Gmail tokens, WhatsApp data and business logic are not intentionally changed.
+
+Run 0_REPAIR_AND_START_MAIN_SERVER.bat as Administrator once after applying this version.

@@ -3,6 +3,7 @@ import path from 'path';
 import { getDefaultGoogleOAuthClient } from './default-google-oauth';
 import { DATA_DIR, JOBS_FILE, SETTINGS_FILE, UPLOADS_DIR } from './paths';
 import { DEFAULT_SETTINGS } from './defaults';
+import { normalizeGeminiModel } from './gemini-model';
 import type { AppSettings, EstimateStatus, JobStatus, JobsDatabase, RepairCategory, ServiceJob, ServiceProduct } from '@/types/service-job';
 
 let writeChain: Promise<void> = Promise.resolve();
@@ -285,7 +286,7 @@ export async function getSettings(): Promise<AppSettings> {
     googleOAuthRefreshToken: String(raw.googleOAuthRefreshToken || ''),
     googleOAuthEmail: String(raw.googleOAuthEmail || ''),
     formVisionEnabled: (raw as any).formVisionEnabled !== false,
-    formVisionModel: String((raw as any).formVisionModel || process.env.GEMINI_MODEL || DEFAULT_SETTINGS.formVisionModel),
+    formVisionModel: normalizeGeminiModel((raw as any).formVisionModel || process.env.GEMINI_MODEL || DEFAULT_SETTINGS.formVisionModel),
     geminiApiKey: String((raw as any).geminiApiKey || process.env.GEMINI_API_KEY || '')
   };
   return settingsCache;
@@ -312,7 +313,7 @@ export async function saveSettings(settings: AppSettings) {
     googleOAuthRefreshToken: String(settings.googleOAuthRefreshToken || '').trim(),
     googleOAuthEmail: String(settings.googleOAuthEmail || '').trim(),
     formVisionEnabled: settings.formVisionEnabled !== false,
-    formVisionModel: String(settings.formVisionModel || DEFAULT_SETTINGS.formVisionModel),
+    formVisionModel: normalizeGeminiModel(settings.formVisionModel || DEFAULT_SETTINGS.formVisionModel),
     geminiApiKey: String(settings.geminiApiKey || '').trim()
   };
   await atomicWrite(SETTINGS_FILE, normalized);

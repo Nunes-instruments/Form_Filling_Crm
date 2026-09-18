@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory=$true)][string]$Root)
+param([Parameter(Mandatory=$true)][string]$Root)
 
 $ErrorActionPreference = 'Stop'
 
@@ -103,6 +103,14 @@ if (Test-NunesRemotePath $Root) {
   Write-Host ("Local runtime ready: {0}" -f $Root) -ForegroundColor Green
   Write-Host 'The server and Servicing engine will run from this local folder.' -ForegroundColor Green
 }
+# V6.5.12 ROOT-BIND FIX: persist the exact active master/runtime root BEFORE
+# touching tasks. Older fast-repair builds could refresh the Desktop shortcut to a
+# new extracted folder while the CompanyResident task still pointed at an older
+# folder. If that old folder was later removed, daily restore failed.
+$stateRootForBinding = Join-Path $env:LOCALAPPDATA 'NUNES Operations'
+New-Item -ItemType Directory -Force -Path $stateRootForBinding | Out-Null
+Set-Content -LiteralPath (Join-Path $stateRootForBinding 'workspace-root.txt') -Value $Root -Encoding UTF8
+
 $launcher = Join-Path $Root 'START_SERVER_AUTOMATIC.bat'
 $watchdog = Join-Path $Root 'NUNES_SERVER_WATCHDOG.bat'
 $desktopLauncher = Join-Path $Root 'OPEN_NUNES_DESKTOP.bat'
@@ -126,13 +134,13 @@ foreach ($legacyName in $legacyRuleNames) {
   Get-NetFirewallRule -DisplayName $legacyName -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue
 }
 
-# 8785 MAIN-SERVER UPDATE: remove only firewall rules created by older NUNES builds.
-# Do not stop or alter whatever application now owns TCP 8765.
-foreach ($oldPort in @(8765,8766,8767,8768,8769,8771,8772,8773,8774,8775)) {
+# V6.5.15 FIXED-PORT UPDATE: TCP 8765 and all unrelated ports are untouched.
+# Remove only obsolete NUNES firewall rules on ports that this release no longer uses.
+foreach ($oldPort in @(8766,8767,8768,8769,8771,8772,8773,8774,8775,8786,8787,8788,8789,8790,8791,8792,8793,8794)) {
   Get-NetFirewallRule -DisplayName ("NUNES Operations TCP $oldPort") -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue
 }
 
-$requiredPorts = @(5055,5056,8770) + @(8785..8795) + @(8865..8875)
+$requiredPorts = @(5055,5056,8770,8795)
 $requiredPorts = @($requiredPorts | ForEach-Object { [int]$_ } | Where-Object { $_ -ge 1 -and $_ -le 65535 } | Sort-Object -Unique)
 if (-not $requiredPorts -or $requiredPorts.Count -lt 1) { throw 'No valid NUNES firewall ports were generated.' }
 
@@ -208,13 +216,10 @@ public static class NunesSetupConsole {
   }
 } catch { }
 
-$prepareResident = Join-Path $Root 'tools\prepare-servicing-resident.ps1'
-if (-not (Test-Path $prepareResident)) { throw "Servicing resident installer is missing: $prepareResident" }
-Write-Host 'Preparing Servicing fast resident runtime (one time)...' -ForegroundColor Cyan
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $prepareResident -Root $Root
-if ($LASTEXITCODE -ne 0) { throw 'Servicing fast resident runtime could not be prepared.' }
-$residentStart = Join-Path $env:LOCALAPPDATA 'NUNES Operations\ServicingResident\start-servicing-resident.ps1'
-if (-not (Test-Path $residentStart)) { throw "Servicing resident launcher is missing after preparation: $residentStart" }
+# V6.5.15 STABLE-START ORDER:
+# The company dashboard is CRITICAL and is prepared FIRST. Servicing and WhatsApp are
+# optional connection modules; a failure in either must never prevent the main NUNES
+# dashboard from starting on TCP 8795.
 
 # Before replacing the dashboard build, stop only VERIFIED old NUNES processes on the
 # fixed dashboard/API ports. This prevents an old Next.js process from serving an old
@@ -231,30 +236,52 @@ function Stop-VerifiedNunesPort([int]$Port,[string]$HealthUrl,[string]$ExpectedP
     }
   } catch {}
 }
-Stop-VerifiedNunesPort 8765 'http://127.0.0.1:8765/api/health' 'NUNES Company Platform'
-Stop-VerifiedNunesPort 8785 'http://127.0.0.1:8785/api/health' 'NUNES Company Platform'
+Stop-VerifiedNunesPort 8795 'http://127.0.0.1:8795/api/health' 'NUNES Company Platform'
 Stop-VerifiedNunesPort 8865 'http://127.0.0.1:8865/api/health' 'NUNES Company Data API'
 
-# FAST OPEN V8: prepare the company data API + dashboard standalone runtime once.
-# Normal login/daily desktop opening then launches these directly without Node/Python
-# discovery, source hashing, npm checks, build validation, or wide port scanning.
+# CRITICAL: prepare the dashboard/data runtime before any optional module.
 $prepareCompanyResident = Join-Path $Root 'tools\prepare-company-resident.ps1'
-if (-not (Test-Path $prepareCompanyResident)) { throw "Company fast resident installer is missing: $prepareCompanyResident" }
-Write-Host 'Preparing NUNES fast company runtime (one time)...' -ForegroundColor Cyan
+if (-not (Test-Path -LiteralPath $prepareCompanyResident -PathType Leaf)) { throw "Company fast resident installer is missing: $prepareCompanyResident" }
+Write-Host 'Preparing NUNES main dashboard runtime first...' -ForegroundColor Cyan
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $prepareCompanyResident -Root $Root
-if ($LASTEXITCODE -ne 0) { throw 'NUNES fast company runtime could not be prepared.' }
+if ($LASTEXITCODE -ne 0) { throw 'NUNES main dashboard runtime could not be prepared.' }
 $companyResidentStart = Join-Path $env:LOCALAPPDATA 'NUNES Operations\CompanyResident\start-company-resident.ps1'
-if (-not (Test-Path $companyResidentStart)) { throw "Company resident launcher is missing after preparation: $companyResidentStart" }
+if (-not (Test-Path -LiteralPath $companyResidentStart -PathType Leaf)) { throw "Company resident launcher is missing after preparation: $companyResidentStart" }
+Write-Host '[OK] Main dashboard runtime is prepared.' -ForegroundColor Green
 
-# V21: prepare the WhatsApp Web link runtime once during owner setup. A linked
-# browser profile reconnects silently; first-time login opens only when the owner asks.
-$prepareWhatsApp = Join-Path $Root 'tools\prepare-whatsapp-resident.ps1'
-if (-not (Test-Path $prepareWhatsApp)) { throw "WhatsApp resident installer is missing: $prepareWhatsApp" }
-Write-Host 'Preparing WhatsApp fast resident runtime (one time)...' -ForegroundColor Cyan
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $prepareWhatsApp -Root $Root
-if ($LASTEXITCODE -ne 0) { throw 'WhatsApp fast resident runtime could not be prepared.' }
+# OPTIONAL: prepare Servicing. Keep the dashboard install alive if this module needs repair.
+$servicingPrepared = $false
+$residentStart = Join-Path $env:LOCALAPPDATA 'NUNES Operations\ServicingResident\start-servicing-resident.ps1'
+try {
+  $prepareResident = Join-Path $Root 'tools\prepare-servicing-resident.ps1'
+  if (-not (Test-Path -LiteralPath $prepareResident -PathType Leaf)) { throw "Servicing resident installer is missing: $prepareResident" }
+  Write-Host 'Preparing Servicing fast resident runtime...' -ForegroundColor Cyan
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $prepareResident -Root $Root
+  if ($LASTEXITCODE -ne 0) { throw 'Servicing fast resident runtime could not be prepared.' }
+  if (-not (Test-Path -LiteralPath $residentStart -PathType Leaf)) { throw "Servicing resident launcher is missing after preparation: $residentStart" }
+  $servicingPrepared = $true
+  Write-Host '[OK] Servicing resident is prepared.' -ForegroundColor Green
+} catch {
+  Write-Host ('[WARNING] Servicing setup did not finish: ' + $_.Exception.Message) -ForegroundColor Yellow
+  Write-Host '[WARNING] Main dashboard setup will continue. Run 5_REPAIR_SERVICING_WHATSAPP.bat later.' -ForegroundColor Yellow
+}
+
+# OPTIONAL: prepare WhatsApp. A WhatsApp setup problem must never block the dashboard.
+$whatsAppPrepared = $false
 $whatsAppResidentStart = Join-Path $env:LOCALAPPDATA 'NUNES Operations\WhatsAppResident\start-whatsapp-resident.ps1'
-if (-not (Test-Path $whatsAppResidentStart)) { throw "WhatsApp resident launcher is missing after preparation: $whatsAppResidentStart" }
+try {
+  $prepareWhatsApp = Join-Path $Root 'tools\prepare-whatsapp-resident.ps1'
+  if (-not (Test-Path -LiteralPath $prepareWhatsApp -PathType Leaf)) { throw "WhatsApp resident installer is missing: $prepareWhatsApp" }
+  Write-Host 'Preparing WhatsApp fast resident runtime...' -ForegroundColor Cyan
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $prepareWhatsApp -Root $Root
+  if ($LASTEXITCODE -ne 0) { throw 'WhatsApp fast resident runtime could not be prepared.' }
+  if (-not (Test-Path -LiteralPath $whatsAppResidentStart -PathType Leaf)) { throw "WhatsApp resident launcher is missing after preparation: $whatsAppResidentStart" }
+  $whatsAppPrepared = $true
+  Write-Host '[OK] WhatsApp resident is prepared.' -ForegroundColor Green
+} catch {
+  Write-Host ('[WARNING] WhatsApp setup did not finish: ' + $_.Exception.Message) -ForegroundColor Yellow
+  Write-Host '[WARNING] Main dashboard setup will continue. Run 5_REPAIR_SERVICING_WHATSAPP.bat later.' -ForegroundColor Yellow
+}
 
 $taskUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $principal = New-ScheduledTaskPrincipal -UserId $taskUser -LogonType Interactive -RunLevel Highest
@@ -291,27 +318,46 @@ $action = New-HiddenPsAction 'company-server' $companyResidentStart '' (Split-Pa
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $taskUser
 Register-ScheduledTask -TaskName 'NUNES Company Server' -Action $action -Trigger $trigger -Settings $serviceSettings -Principal $principal -Force | Out-Null
 
-$serviceAction = New-HiddenPsAction 'servicing-resident' $residentStart '-Port 5055' (Split-Path -Parent $residentStart)
-$serviceTrigger = New-ScheduledTaskTrigger -AtLogOn -User $taskUser
-Register-ScheduledTask -TaskName 'NUNES Servicing Warm' -Action $serviceAction -Trigger $serviceTrigger -Settings $serviceSettings -Principal $principal -Force | Out-Null
-$keepTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration (New-TimeSpan -Days 3650)
-Register-ScheduledTask -TaskName 'NUNES Servicing Keepalive' -Action $serviceAction -Trigger $keepTrigger -Settings $serviceSettings -Principal $principal -Force | Out-Null
+foreach ($oldOptionalTask in @('NUNES Servicing Warm','NUNES Servicing Keepalive')) {
+  try { Unregister-ScheduledTask -TaskName $oldOptionalTask -Confirm:$false -ErrorAction SilentlyContinue } catch {}
+}
+if ($servicingPrepared) {
+  $serviceAction = New-HiddenPsAction 'servicing-resident' $residentStart '-Port 5055' (Split-Path -Parent $residentStart)
+  $serviceTrigger = New-ScheduledTaskTrigger -AtLogOn -User $taskUser
+  Register-ScheduledTask -TaskName 'NUNES Servicing Warm' -Action $serviceAction -Trigger $serviceTrigger -Settings $serviceSettings -Principal $principal -Force | Out-Null
+  $keepTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration (New-TimeSpan -Days 3650)
+  Register-ScheduledTask -TaskName 'NUNES Servicing Keepalive' -Action $serviceAction -Trigger $keepTrigger -Settings $serviceSettings -Principal $principal -Force | Out-Null
+}
 
 $companyKeepTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration (New-TimeSpan -Days 3650)
 Register-ScheduledTask -TaskName 'NUNES Company Keepalive' -Action $action -Trigger $companyKeepTrigger -Settings $serviceSettings -Principal $principal -Force | Out-Null
 
-# WhatsApp is started at Windows logon and kept resident. If already linked it
-# reconnects silently. First-time linking opens WhatsApp Web only on explicit request.
-$waAction = New-HiddenPsAction 'whatsapp-resident' $whatsAppResidentStart '-Port 5056' (Split-Path -Parent $whatsAppResidentStart)
-$waTrigger = New-ScheduledTaskTrigger -AtLogOn -User $taskUser
-Register-ScheduledTask -TaskName 'NUNES WhatsApp Resident' -Action $waAction -Trigger $waTrigger -Settings $serviceSettings -Principal $principal -Force | Out-Null
-$waKeepTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration (New-TimeSpan -Days 3650)
-Register-ScheduledTask -TaskName 'NUNES WhatsApp Keepalive' -Action $waAction -Trigger $waKeepTrigger -Settings $serviceSettings -Principal $principal -Force | Out-Null
+# WhatsApp is started at Windows logon and kept resident when its runtime is ready.
+foreach ($oldOptionalTask in @('NUNES WhatsApp Resident','NUNES WhatsApp Keepalive')) {
+  try { Unregister-ScheduledTask -TaskName $oldOptionalTask -Confirm:$false -ErrorAction SilentlyContinue } catch {}
+}
+if ($whatsAppPrepared) {
+  $waAction = New-HiddenPsAction 'whatsapp-resident' $whatsAppResidentStart '-Port 5056' (Split-Path -Parent $whatsAppResidentStart)
+  $waTrigger = New-ScheduledTaskTrigger -AtLogOn -User $taskUser
+  Register-ScheduledTask -TaskName 'NUNES WhatsApp Resident' -Action $waAction -Trigger $waTrigger -Settings $serviceSettings -Principal $principal -Force | Out-Null
+  $waKeepTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration (New-TimeSpan -Days 3650)
+  Register-ScheduledTask -TaskName 'NUNES WhatsApp Keepalive' -Action $waAction -Trigger $waKeepTrigger -Settings $serviceSettings -Principal $principal -Force | Out-Null
+}
 
 $watchHidden=Join-Path $Root 'tools\run-watchdog-hidden.ps1'
 $watchAction = New-HiddenPsAction 'company-watchdog' $watchHidden ('-Root "{0}"' -f $Root) $Root
 $watchTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(3) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
 Register-ScheduledTask -TaskName 'NUNES Company Watchdog' -Action $watchAction -Trigger $watchTrigger -Settings $settings -Principal $principal -Force | Out-Null
+
+# V6.5.3: GitHub is now the single code source. The MAIN SERVER checks
+# Form_Filling_Crm/main every minute and applies only safe fast-forward updates.
+# Use the installation/source root here (not the local runtime mirror) because
+# the Git repository lives in the master VS Code folder.
+$githubAutoInstaller = Join-Path $InstallSourceRoot 'tools\install-github-auto-update.ps1'
+if ((Test-Path -LiteralPath $githubAutoInstaller -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $InstallSourceRoot '.git') -PathType Container)) {
+  & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $githubAutoInstaller -Root $InstallSourceRoot -Quiet
+  if ($LASTEXITCODE -ne 0) { Write-Host 'GitHub auto-update task could not be refreshed. Main server setup will continue.' -ForegroundColor Yellow }
+}
 
 # Desktop-style launcher: create a verified silent shortcut through WScript.
 # The normal launcher logic is unchanged; only the console window is suppressed.
@@ -320,28 +366,41 @@ if ($LASTEXITCODE -ne 0) { throw 'NUNES Operations desktop shortcut could not be
 
 Remove-Item (Join-Path $env:LOCALAPPDATA 'NUNES Operations\client-server-url.txt') -Force -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $Root 'OPEN_ON_OTHER_DEVICES.txt') -Force -ErrorAction SilentlyContinue
-# The resident was prepared and started above. Start the company shell after Servicing,
-# preserving maximum CPU/disk priority for the form engine during setup/login.
-Start-ScheduledTask -TaskName 'NUNES WhatsApp Resident'
-Start-Sleep -Milliseconds 120
-Start-ScheduledTask -TaskName 'NUNES Servicing Warm'
-Start-Sleep -Milliseconds 280
+# CRITICAL service starts first and is never held behind optional modules.
 Start-ScheduledTask -TaskName 'NUNES Company Server'
+Start-Sleep -Milliseconds 120
+if ($servicingPrepared) { try { Start-ScheduledTask -TaskName 'NUNES Servicing Warm' -ErrorAction Stop } catch {} }
+if ($whatsAppPrepared) { try { Start-ScheduledTask -TaskName 'NUNES WhatsApp Resident' -ErrorAction Stop } catch {} }
+
+$dashboardReady=$false
+$dashboardDeadline=(Get-Date).AddSeconds(20)
+while((Get-Date) -lt $dashboardDeadline){
+  try{
+    $h=Invoke-RestMethod -TimeoutSec 1 'http://127.0.0.1:8795/api/health'
+    if($h.ok -eq $true -and [string]$h.product -eq 'NUNES Company Platform'){$dashboardReady=$true;break}
+  }catch{}
+  Start-Sleep -Milliseconds 150
+}
+if(-not $dashboardReady){ throw 'Main dashboard did not become ready on TCP 8795 after setup.' }
 
 $serviceReady=$false
-$serviceDeadline=(Get-Date).AddSeconds(12)
-while((Get-Date) -lt $serviceDeadline){
-  try{
-    $h=Invoke-RestMethod -TimeoutSec 1 'http://127.0.0.1:5055/api/health'
-    if($h.app -eq 'ServiceFlowJobCards' -and $h.ok -eq $true){$serviceReady=$true;break}
-  }catch{}
-  Start-Sleep -Milliseconds 120
+if($servicingPrepared){
+  $serviceDeadline=(Get-Date).AddSeconds(12)
+  while((Get-Date) -lt $serviceDeadline){
+    try{
+      $h=Invoke-RestMethod -TimeoutSec 1 'http://127.0.0.1:5055/api/health'
+      if($h.app -eq 'ServiceFlowJobCards' -and $h.ok -eq $true){$serviceReady=$true;break}
+    }catch{}
+    Start-Sleep -Milliseconds 120
+  }
 }
 if($serviceReady){ Write-Host 'Servicing fast resident is READY NOW.' -ForegroundColor Green }
-else{ throw 'Servicing fast resident did not become ready after one-time preparation.' }
+elseif($servicingPrepared){ Write-Host '[WARNING] Servicing runtime is prepared but is not healthy yet. Main dashboard remains available.' -ForegroundColor Yellow }
 
 Write-Host ''
-Write-Host 'NUNES always-on server setup completed.' -ForegroundColor Green
-Write-Host 'The dashboard, Servicing and WhatsApp residents start automatically after Windows sign-in.'
+Write-Host 'NUNES always-on MAIN SERVER setup completed.' -ForegroundColor Green
+Write-Host 'Main dashboard is READY on TCP 8795.' -ForegroundColor Green
+if($servicingPrepared){ Write-Host 'Servicing resident: prepared.' } else { Write-Host 'Servicing resident: needs optional repair.' -ForegroundColor Yellow }
+if($whatsAppPrepared){ Write-Host 'WhatsApp resident: prepared.' } else { Write-Host 'WhatsApp resident: needs optional repair.' -ForegroundColor Yellow }
 Write-Host 'A NUNES Operations desktop shortcut was created.'
-Write-Host 'Windows Firewall access is enabled only for devices on the local subnet.'
+Write-Host 'Windows Firewall access is enabled for office LAN and Tailscale company devices.'

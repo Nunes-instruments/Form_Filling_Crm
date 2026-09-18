@@ -11,7 +11,7 @@ export async function POST() {
     const cfg = await getDefaultGoogleOAuthClient();
     if (!cfg?.client_id || !cfg?.client_secret) {
       return NextResponse.json({
-        error:'The local default Google Desktop OAuth JSON is missing. On the main server run 0_FIRST_TIME_VSCODE_MAIN_SERVER.bat, or use Add / Change Other Google JSON.'
+        error:'The local default Google Desktop OAuth JSON is missing. On the main server run 0_FIRST_TIME_SERVER_SETUP_8795.bat after placing the JSON in LOCAL_ONLY_SECRETS, or use Add / Change Other Google JSON.'
       }, { status:500 });
     }
 

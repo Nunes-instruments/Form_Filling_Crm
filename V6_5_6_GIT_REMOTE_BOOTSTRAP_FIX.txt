@@ -1,0 +1,22 @@
+NUNES Operations Workspace V6.5.6
+
+Fixes the fresh-folder Git bootstrap failure on Windows PowerShell 5:
+  git.exe : error: No such remote 'origin'
+  NativeCommandError
+
+Root cause:
+A newly extracted full folder has no Git remote yet. PowerShell 5 with
+ErrorActionPreference=Stop can treat Git's normal STDERR message as a terminating
+PowerShell error before the script gets a chance to add the origin.
+
+V6.5.6 fix:
+- Checks `git remote` first; only calls `git remote get-url origin` when origin exists.
+- Git probe wrapper now uses the actual Git exit code instead of PowerShell STDERR behavior.
+- Same protection added to auto-watcher registration and master-folder detection.
+- Fresh extracted folder can safely initialize and attach to:
+  https://github.com/Nunes-instruments/Form_Filling_Crm.git
+- Existing local product files remain in place while GitHub history is attached.
+- Company runtime data, secrets, OAuth credentials, DB files and backups remain excluded.
+
+Run on MAIN SERVER PC:
+  J_PUBLISH_LIVE_AND_GITHUB.bat

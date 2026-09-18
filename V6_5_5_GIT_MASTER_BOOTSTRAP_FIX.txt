@@ -1,0 +1,15 @@
+NUNES V6.5.5 - Git Master Bootstrap Fix
+
+Problem fixed:
+- J_PUBLISH_LIVE_AND_GITHUB.bat previously stopped when a freshly extracted FULL folder had no .git directory.
+
+New behavior:
+- J_PUBLISH_LIVE_AND_GITHUB.bat can be run directly from this FULL folder.
+- It initializes Git automatically if needed.
+- It connects only to https://github.com/Nunes-instruments/Form_Filling_Crm.git.
+- It fetches the existing main history and attaches it with git reset --mixed so the local full product files are NOT replaced.
+- It verifies secret/data ignore protection before staging.
+- It then applies the verified code live, commits, safely syncs with origin/main, pushes, and enables the 1-minute auto watcher.
+- I_ENABLE_GITHUB_AUTO_UPDATE.bat, G_SAVE_TO_GITHUB.bat, and first-time setup use the same safe bootstrap.
+
+Staff/owner PCs do not need Git, VS Code, ZIP files, or future manual code updates after their one-time connection setup.

@@ -14,7 +14,7 @@ const INSTANCE_ID = createHash('sha1').update(process.cwd().toLowerCase()).diges
 
 export async function GET() {
   return NextResponse.json(
-    { app: 'ServiceFlowJobCards', version: '1.1.34', ok: true, instance_id: INSTANCE_ID, source_signature: SOURCE_SIGNATURE },
+    { app: 'ServiceFlowJobCards', version: '1.1.35', ok: true, instance_id: INSTANCE_ID, source_signature: SOURCE_SIGNATURE },
     { headers: { 'cache-control': 'no-store' } }
   );
 }

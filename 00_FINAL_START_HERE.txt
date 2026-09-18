@@ -1,0 +1,63 @@
+NUNES OPERATIONS WORKSPACE V6.5.15 - STABLE MAIN SERVER 8795
+===========================================================
+
+FIXED PORTS
+- Main Dashboard : 8795
+- Purchasing     : 8770
+- Servicing      : 5055
+- WhatsApp       : 5056
+- 8765           : UNTOUCHED - belongs to another project
+- 8785           : NOT USED by this NUNES release
+
+IMPORTANT V6.5.15 CHANGE
+The MAIN DASHBOARD is now the critical first service. Servicing/WhatsApp setup
+can no longer stop the whole NUNES server. If an optional module has a problem,
+8795 still starts and you can repair only those modules later.
+
+A) MAIN SERVER PC - FIRST TIME / AFTER REPLACING THIS FOLDER
+1. Extract this COMPLETE folder to one permanent local path, recommended:
+     C:\NUNES\Form_Filling_Crm
+2. Right-click -> Run as Administrator:
+     0_START_HERE_MAIN_SERVER_8795.bat
+3. Wait for DONE.
+4. Main PC opens:
+     http://127.0.0.1:8795
+5. Daily use after setup:
+     Desktop -> NUNES Operations
+
+If Servicing or WhatsApp shows WARNING after main dashboard is already READY:
+     5_REPAIR_SERVICING_WHATSAPP.bat
+This repair does not stop the main dashboard.
+
+B) OWNER PC - ONE TIME ONLY
+If owner PC is the main server PC, no client setup is needed.
+On a different owner PC:
+1. Install Tailscale and sign in to the same company tailnet.
+2. Run: 3_SETUP_OWNER_PC_ONCE.bat
+3. Accept default: http://100.97.196.17:8795
+4. Use Desktop -> NUNES Operations after that.
+
+C) STAFF PC - ONE TIME ONLY
+1. Install Tailscale and sign in to the same company tailnet.
+2. Run: 4_SETUP_STAFF_PC_ONCE.bat
+3. Accept default: http://100.97.196.17:8795
+4. Use Desktop -> NUNES Operations after that.
+
+D) GMAIL + WHATSAPP CONNECTIONS
+Do this only on the MAIN SERVER PC.
+Open: http://127.0.0.1:5055/settings
+- Google/Gmail: Use Default Google JSON or Add/Change Other Google JSON, then Sign in.
+- WhatsApp: use the WhatsApp link/login action. Existing local sessions/tokens are preserved.
+If 5055 is not ready, run 5_REPAIR_SERVICING_WHATSAPP.bat.
+
+E) FUTURE CODE CHANGES
+Use the SAME master folder in VS Code.
+Save changes, then run:
+     1_APPLY_FUTURE_CHANGES_LIVE.bat
+Staff/Owner do not receive another ZIP. They use the same main server and receive
+the latest version on refresh/next open (and auto-refresh where rollout detection is loaded).
+
+CHECKS
+- 2_CHECK_SERVER_8795.bat  -> main server status
+- L_CHECK_1_SECOND_SERVICING.bat -> Servicing response speed
+- 5_REPAIR_SERVICING_WHATSAPP.bat -> optional module repair only

@@ -2,7 +2,7 @@
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 
-if not defined NUNES_PORT set "NUNES_PORT=8785"
+if not defined NUNES_PORT set "NUNES_PORT=8795"
 if not defined NUNES_HOST set "NUNES_HOST=0.0.0.0"
 
 rem Next.js is configured with output:'standalone'. In this mode the supported

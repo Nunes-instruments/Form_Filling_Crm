@@ -48,8 +48,11 @@ if ($null -eq $obj) { $obj = [pscustomobject]@{} }
 
 $obj | Add-Member -NotePropertyName geminiApiKey -NotePropertyValue $key -Force
 $obj | Add-Member -NotePropertyName formVisionEnabled -NotePropertyValue $true -Force
-if (-not ($obj.PSObject.Properties.Name -contains 'formVisionModel') -or [string]::IsNullOrWhiteSpace([string]$obj.formVisionModel)) {
-  $obj | Add-Member -NotePropertyName formVisionModel -NotePropertyValue 'gemini-2.5-flash' -Force
+$savedModel = if ($obj.PSObject.Properties.Name -contains 'formVisionModel') { [string]$obj.formVisionModel } else { '' }
+if ([string]::IsNullOrWhiteSpace($savedModel) -or $savedModel -eq 'gemini-2.5-flash') {
+  $obj | Add-Member -NotePropertyName formVisionModel -NotePropertyValue 'gemini-3.6-flash' -Force
+} elseif ($savedModel -eq 'gemini-2.5-flash-lite') {
+  $obj | Add-Member -NotePropertyName formVisionModel -NotePropertyValue 'gemini-3.5-flash-lite' -Force
 }
 foreach ($name in @('groqApiKey','formVlmEnabled','formVlmModel')) {
   if ($obj.PSObject.Properties.Name -contains $name) { $obj.PSObject.Properties.Remove($name) }

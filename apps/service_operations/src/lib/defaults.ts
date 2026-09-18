@@ -1,4 +1,5 @@
 import type { AppSettings, ServiceJob, ServiceProduct } from '@/types/service-job';
+import { DEFAULT_GEMINI_MODEL } from '@/lib/gemini-model';
 
 // LAN-safe UUID generation. crypto.randomUUID() is restricted to secure browser
 // contexts on some Chrome/Edge versions, so staff opening ServiceFlow over plain
@@ -41,7 +42,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   googleOAuthRefreshToken: '',
   googleOAuthEmail: '',
   formVisionEnabled: true,
-  formVisionModel: 'gemini-2.5-flash',
+  formVisionModel: DEFAULT_GEMINI_MODEL,
   geminiApiKey: ''
 };
 

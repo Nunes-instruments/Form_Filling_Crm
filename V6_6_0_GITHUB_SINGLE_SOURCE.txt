@@ -1,0 +1,10 @@
+V6.6.0 GITHUB SINGLE SOURCE UPDATE
+- One all-in-one setup BAT for Server / Owner / Staff.
+- Main dashboard fixed to TCP 8795; TCP 8765 is untouched.
+- One GitHub source: Nunes-instruments/Form_Filling_Crm, branch main.
+- Main server scheduled GitHub check every 1 minute.
+- Remote main commits auto fast-forward + apply + health verify + rollback on failure.
+- Owner/staff use permanent Desktop URL icon to Tailscale main-server URL.
+- No owner/staff source ZIP updates are needed for normal app changes.
+- Open pages check rollout ID every ~5 seconds and refresh after a live update.
+- Existing Git safety checks continue protecting local credentials and company data.

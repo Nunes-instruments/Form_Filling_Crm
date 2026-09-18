@@ -7,17 +7,14 @@ echo ============================================================
 echo                SAVE NUNES VERSION TO GITHUB
 echo ============================================================
 where git.exe >nul 2>&1 || (echo Git is not installed.& pause & exit /b 2)
-if not exist ".git" (echo Run 0_FIRST_TIME_VSCODE_MAIN_SERVER.bat first.& pause & exit /b 2)
 
-for /f "delims=" %%I in ('git remote get-url origin 2^>nul') do set "REMOTE=%%I"
-if not defined REMOTE (
-  echo GitHub is not connected yet.
-  echo Run 1_CONNECT_GITHUB_PRIVATE_REPO.bat once.
-  pause
-  exit /b 2
-)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\assert-full-source.ps1" -Root "%~dp0."
+if errorlevel 1 (echo [STOPPED] Use the complete NUNES master folder, not a patch folder.& pause & exit /b 12)
 
-git check-ignore -q LOCAL_ONLY_SECRETS\google_oauth_client.json
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\ensure-git-master.ps1" -Root "%~dp0."
+if errorlevel 1 (echo [ERROR] Git master preparation failed.& pause & exit /b 2)
+
+git check-ignore -q --no-index LOCAL_ONLY_SECRETS/google_oauth_client.json
 if errorlevel 1 (
   echo [BLOCKED] Private-secret protection is not active. Nothing was pushed.
   pause
@@ -25,9 +22,9 @@ if errorlevel 1 (
 )
 
 git add -A
-git diff --cached --name-only | findstr /I /R "LOCAL_ONLY_SECRETS google_oauth_client.json client_secret.*json" >nul
-if not errorlevel 1 (
-  echo [BLOCKED] A Google credential is staged. Nothing was pushed.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\check-staged-git-safety.ps1" -Root "%~dp0."
+if errorlevel 1 (
+  echo [BLOCKED] Private data or credentials are staged. Nothing was pushed.
   git reset >nul
   pause
   exit /b 1
@@ -45,13 +42,25 @@ set /p "MSG=Version note [Enter = NUNES update]: "
 if not defined MSG set "MSG=NUNES update"
 git commit -m "%MSG%"
 if errorlevel 1 goto :FAIL
-git push origin main
+git fetch origin main --prune
+if errorlevel 1 goto :FAIL
+git merge-base --is-ancestor origin/main HEAD >nul 2>&1
+if errorlevel 1 (
+  git rebase origin/main
+  if errorlevel 1 goto :REBASEFAIL
+)
+git push -u origin main
 if errorlevel 1 goto :FAIL
 
 echo.
-echo [OK] Version saved to GitHub.
+echo [OK] Version saved to GitHub Form_Filling_Crm/main.
 pause
 exit /b 0
+:REBASEFAIL
+echo.
+echo [ERROR] GitHub has conflicting changes. Run git rebase --abort, resolve in VS Code, then retry.
+pause
+exit /b 1
 :FAIL
 echo.
 echo [ERROR] GitHub save failed. Live server/data were not changed by this script.

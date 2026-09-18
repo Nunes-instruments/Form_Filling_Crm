@@ -1,0 +1,14 @@
+GEMINI FORM READER FIX - SERVICE OPERATIONS 1.1.35
+
+Problem fixed:
+- Old saved/default Gemini 2.5 Flash model could return: model is no longer available to new users.
+
+Changes:
+- Default Service Form reader model: gemini-3.6-flash.
+- Old saved gemini-2.5-flash automatically migrates to gemini-3.6-flash.
+- Old saved gemini-2.5-flash-lite automatically migrates to gemini-3.5-flash-lite.
+- Settings screen no longer offers the old 2.5 models.
+- Removed deprecated temperature/topP options from the Gemini 3.x form-reader request.
+- Existing Service data, Gmail, WhatsApp and branch settings are not erased.
+
+After updating the code, restart the NUNES main server once.

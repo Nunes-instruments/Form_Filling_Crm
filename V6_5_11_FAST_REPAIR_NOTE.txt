@@ -1,0 +1,18 @@
+V6.5.11 FAST REPAIR/START UPDATE
+
+WHY V6.5.10 REPAIR LOOKED SLOW
+The repair BAT is a one-time installer/repair path. It can verify/rebuild Next.js runtimes,
+prepare Node/Python, Servicing and WhatsApp residents, create firewall rules, and register
+scheduled tasks. That is intentionally heavier than normal daily opening.
+
+V6.5.11 CHANGE
+- First checks if dashboard 8795 + Servicing 5055 + scheduled resident tasks are already healthy.
+- If healthy, skips the heavy setup/build path and refreshes only the desktop shortcut.
+- If sleeping, tries a fast resident recovery before any rebuild.
+- Only if the prepared runtime is actually missing/damaged does it run full repair.
+- Shows progress labels so setup never appears to be doing nothing.
+
+DAILY USE
+Use the Desktop shortcut: NUNES Operations
+or START_NUNES_NOW_FAST.bat
+Do not run 0_REPAIR_AND_START_MAIN_SERVER.bat every day.

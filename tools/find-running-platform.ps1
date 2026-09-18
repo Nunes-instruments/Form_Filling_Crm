@@ -11,7 +11,7 @@ $client.Timeout=[TimeSpan]::FromMilliseconds([Math]::Max(120,$TimeoutMillisecond
 $deadline=[DateTime]::UtcNow.AddMilliseconds([Math]::Max(0,$WaitMilliseconds))
 try{
   do {
-    foreach($p in 8785,8786,8787,8788,8789,8790,8791,8792,8793,8794,8795){
+    foreach($p in 8795){
       try{
         $text=$client.GetStringAsync("http://127.0.0.1:$p/api/health").GetAwaiter().GetResult()
         $j=$text|ConvertFrom-Json

@@ -1,4 +1,4 @@
-﻿param(
+param(
   [Parameter(Mandatory=$true)][string]$Root
 )
 $ErrorActionPreference = 'Stop'
@@ -62,7 +62,7 @@ $config = [ordered]@{
   pythonExe = $pythonExe
   dashboardServer = $dashboardServer
   dataServer = $dataServer
-  dashboardPort = 8785
+  dashboardPort = 8795
   apiPort = 8865
   preparedAt = [DateTime]::UtcNow.ToString('o')
 }

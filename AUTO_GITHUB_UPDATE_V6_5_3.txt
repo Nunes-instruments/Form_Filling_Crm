@@ -1,0 +1,10 @@
+V6.5.3 AUTO GITHUB UPDATE
+========================
+- Fixed repository: Nunes-instruments/Form_Filling_Crm main.
+- Main server checks GitHub every 1 minute.
+- Safe fast-forward only; local uncommitted work is never overwritten.
+- Protected secret/data paths are blocked.
+- Update is built and health/rollout verified before being considered successful.
+- Failed live verification triggers source rollback and re-application of the previous commit.
+- Staff/owner PCs require no recurring ZIP/code updates.
+- VS Code Ctrl+Shift+B is now the one-button local publish path.

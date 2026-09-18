@@ -13,5 +13,37 @@
       "**/node_modules": true,
       "**/.nunes_runtime": true
     }
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "NUNES: Publish Live + GitHub",
+        "type": "shell",
+        "command": "${workspaceFolder}\\J_PUBLISH_LIVE_AND_GITHUB.bat",
+        "problemMatcher": [],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared",
+          "clear": true
+        }
+      },
+      {
+        "label": "NUNES: Apply Live Only",
+        "type": "shell",
+        "command": "${workspaceFolder}\\F_APPLY_VSCODE_CHANGES_LIVE.bat",
+        "problemMatcher": []
+      },
+      {
+        "label": "NUNES: Check GitHub Auto Update",
+        "type": "shell",
+        "command": "${workspaceFolder}\\CHECK_GITHUB_AUTO_UPDATE.bat",
+        "problemMatcher": []
+      }
+    ]
   }
 }

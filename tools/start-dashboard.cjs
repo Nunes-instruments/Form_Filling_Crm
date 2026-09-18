@@ -18,7 +18,7 @@ function die(message, extra = '') {
 }
 
 const root = path.resolve(process.argv[2] || '');
-const port = String(process.argv[3] || '8785');
+const port = String(process.argv[3] || '8795');
 const listenHost = String(process.argv[4] || '0.0.0.0');
 const apiUrl = String(process.argv[5] || process.env.NUNES_API_INTERNAL_URL || '');
 const explicitNode = String(process.argv[6] || process.execPath || 'node');
