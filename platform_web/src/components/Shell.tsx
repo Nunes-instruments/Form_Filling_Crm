@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Activity, Bell, CheckCircle2, ClipboardCheck, FileText, Home, LayoutDashboard, Menu, Search, Settings, Users, X } from "lucide-react";
+import { Bell, CheckCircle2, ClipboardCheck, FileText, Home, LayoutDashboard, Menu, Search, Settings, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getDataConnectionStatus, getNotifications, searchCompany } from "@/lib/data";
 import type { NotificationItem, SearchResult } from "@/lib/types";
@@ -11,9 +11,7 @@ const nav=[
  {href:"/forms",label:"Forms",icon:FileText},
  {href:"/tasks",label:"Tasks",icon:ClipboardCheck},
  {href:"/reports",label:"Reports",icon:FileText},
- {href:"/activity",label:"Activity",icon:Activity},
- {href:"/team",label:"Team",icon:Users},
- {href:"/settings",label:"Settings",icon:Settings},
+{href:"/settings",label:"Settings",icon:Settings},
 ];
 
 function SearchBox(){

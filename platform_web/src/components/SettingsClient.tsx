@@ -1,6 +1,28 @@
 "use client";
+import Link from "next/link";
 import {useEffect,useState} from "react";
-import {CheckCircle2,Cloud,Database,Layers3,LockKeyhole,Server,ShieldCheck} from "lucide-react";
+import {CheckCircle2,FileText,Server,Wrench} from "lucide-react";
 import {getOverview} from "@/lib/data";
 import {MODULE_REGISTRY} from "@/lib/module-registry";
-export default function SettingsClient(){const [d,setD]=useState<any>(null);useEffect(()=>{getOverview().then(setD)},[]);return <main className="page"><div className="page-head"><div><div className="eyebrow">Settings</div><h1>Platform administration</h1><p>Architecture, module registry and runtime status. Secret credentials stay inside the source applications or server environment and are not displayed here.</p></div></div><div className="architecture-grid"><article><Layers3/><h3>Modular registry</h3><p>Each operational application has its own route, workflow, status model, reports and dashboard metrics.</p></article><article><Database/><h3>Source-preserving data</h3><p>V6 reads the existing Purchasing SQLite database and Servicing job store directly without converting them into one common form.</p></article><article><Cloud/><h3>Cloud-ready runtime</h3><p>The included cloud installer runs the platform and both engines independently of an office PC.</p></article><article><ShieldCheck/><h3>Security boundary</h3><p>API keys are not exposed in the company shell. Authentication can later be moved to Supabase/SSO without changing the module registry.</p></article></div><section className="section"><div className="section-head"><div><h2>Installed operational modules</h2><p>Purchasing and Servicing are the first entries in the expandable registry.</p></div></div><div className="section-body module-registry-list">{MODULE_REGISTRY.map(m=>{const state=d?.modules?.[m.engineKey];return <article key={m.id}><div className="registry-head"><div><span>{m.id}</span><h3>{m.name}</h3><p>{m.description}</p></div><span className={`status-chip ${state?.ready?"good":"wait"}`}>{state?.ready?"Ready":"Idle / starts on open"}</span></div><div className="registry-grid"><div><b>Route</b><code>{m.route}</code></div><div><b>Workflow</b><span>{m.workflow.join(" → ")}</span></div><div><b>Dashboard metrics</b><span>{m.dashboardMetrics.join(", ")}</span></div><div><b>Reports</b><span>{m.reports.join(", ")}</span></div></div></article>})}</div></section><section className="section"><div className="section-head"><div><h2>Runtime</h2><p>Current company platform environment.</p></div></div><div className="section-body runtime-list"><div><Server/><span><b>Platform</b>{d?.system?.product||"NUNES Company Platform"}</span><strong>V6.4.6</strong></div><div><Cloud/><span><b>Mode</b>{d?.system?.mode||"Loading"}</span><strong>{d?.system?.public_url||d?.system?.lan_url||"—"}</strong></div><div><LockKeyhole/><span><b>Secrets</b>Not displayed in browser</span><CheckCircle2/></div></div></section></main>}
+
+export default function SettingsClient(){
+ const [data,setData]=useState<any>(null);
+ useEffect(()=>{getOverview(true).then(setData).catch(()=>setData({}))},[]);
+ const purchasing=data?.modules?.order_forms;
+ const servicing=data?.modules?.service_operations;
+ const systemOnline=Boolean(data)&&data?.system?.data_state!=="offline"&&data?.system?.data_state!=="error";
+ return <main className="page simple-settings-page">
+  <div className="page-head"><div><div className="eyebrow">Settings</div><h1>Settings</h1><p>Simple system status and application access for NUNES Operations.</p></div></div>
+
+  <section className="simple-settings-status">
+   <article><span className="simple-settings-icon"><Server/></span><div><span>Company data</span><strong>{systemOnline?"Connected":"Checking"}</strong><p>Main operational data connection.</p></div><CheckCircle2 className={systemOnline?"status-ok":"status-wait"}/></article>
+   <article><span className="simple-settings-icon purchasing"><FileText/></span><div><span>Purchasing</span><strong>{purchasing?.ready?"Ready":"Starts when opened"}</strong><p>Purchasing forms and workflow.</p></div><CheckCircle2 className={purchasing?.ready?"status-ok":"status-wait"}/></article>
+   <article><span className="simple-settings-icon servicing"><Wrench/></span><div><span>Servicing</span><strong>{servicing?.ready?"Ready":"Starts when opened"}</strong><p>Servicing forms and job records.</p></div><CheckCircle2 className={servicing?.ready?"status-ok":"status-wait"}/></article>
+  </section>
+
+  <section className="section simple-settings-section">
+   <div className="section-head"><div><h2>Applications</h2><p>Open the form you need. Technical configuration is kept out of this page.</p></div></div>
+   <div className="section-body simple-settings-apps">{MODULE_REGISTRY.map(m=>{const state=data?.modules?.[m.engineKey];return <article key={m.id}><div><span>{m.name}</span><p>{m.id==="purchasing"?"Create and manage purchasing forms.":"Create and manage servicing forms."}</p></div><span className={`simple-settings-state ${state?.ready?"ready":"idle"}`}>{state?.ready?"Ready":"Available"}</span><Link className="btn primary" href={m.route}>Open</Link></article>})}</div>
+  </section>
+ </main>
+}
