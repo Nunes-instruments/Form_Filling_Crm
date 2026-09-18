@@ -1,0 +1,21 @@
+NUNES V6.6.2 - NEXT.JS CACHE SELF-REPAIR
+
+Problem fixed:
+V6.6.1 could fail while preparing the main dashboard with:
+Module not found: next/dist/client/components/builtin/global-not-found.js
+inside LOCALAPPDATA\NUNES Operations\PlatformCache\runtime\...\node_modules.
+
+Cause:
+The old cache validator accepted node_modules when next/package.json existed, even if the Next.js package was only partially populated.
+
+V6.6.2 changes:
+- validates required Next.js / React runtime files and locked versions before cache reuse
+- removes only broken generated node_modules links/caches
+- performs exact npm ci repair
+- retries online verification if the first install is incomplete
+- if the dashboard build fails once, performs one clean dependency/cache repair and rebuild automatically
+- uses junction-safe deletion so persistent target folders are not traversed accidentally
+- Purchasing and Servicing persistent data are not intentionally deleted
+
+Run on MAIN SERVER only:
+J_REPAIR_AND_FORCE_LATEST_V6_6_2.bat

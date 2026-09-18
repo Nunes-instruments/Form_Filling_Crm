@@ -1,0 +1,14 @@
+NUNES V6.6.1 STALE SERVICING RUNTIME FIX
+
+Exact cause fixed:
+- Service source changed, but SOURCE_SIGNATURE.txt could remain old.
+- prepare-servicing-resident.ps1 trusted only that old marker.
+- Therefore the old LocalAppData Servicing runtime was reused even after GitHub/main source was newer.
+
+Changes:
+- Runtime signature is now calculated from actual service source files.
+- Main version: 6.6.1
+- Servicing version: 1.1.36
+- Service source signature: 0cbbd573c254cd683714120ca2027f7706ff3664c536db67db65f3f351276d1f
+- J_FORCE_LATEST_V6_6_1.bat applies, verifies, repairs shortcut, and opens the latest build.
+- Existing ServiceData/PurchasingData are preserved by the normal update engine.

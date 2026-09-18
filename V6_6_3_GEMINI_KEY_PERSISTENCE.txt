@@ -1,0 +1,20 @@
+NUNES V6.6.3 - GEMINI KEY PERSISTENCE
+
+Problem fixed:
+- A runtime rebuild could expose a new shared ServiceData/settings.json without the previously configured Gemini key.
+- Gemini then showed "API key is not configured" even though the key had been entered in an older runtime.
+
+Fix:
+- CONFIGURE_GEMINI now searches the current shared settings, encrypted local secret, older ServicingRuntimeV5 settings, and MainServerBackups.
+- It can recover an existing key automatically.
+- The selected key is saved to the persistent ServiceData/settings.json.
+- A second fallback is encrypted with Windows DPAPI in:
+    %LOCALAPPDATA%\NUNES Operations\Secrets\gemini-api-key.dpapi
+- start-servicing-resident.ps1 injects that key only into the local Servicing Node process.
+- The key is never written to tracked Git source.
+
+Run:
+  K_FIX_GEMINI_KEY_PERSISTENCE_V6_6_3.bat
+
+If an old key is recovered, press ENTER to keep it.
+If no key is recovered, paste a NEW Gemini key once.

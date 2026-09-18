@@ -48,5 +48,22 @@ if($bad.Count -gt 0){
   exit 3
 }
 
-Write-Host '[OK] Git staging safety check passed. .env.example and empty .keep/.gitkeep placeholders are allowed.' -ForegroundColor Green
+# Content-level secret safety: also block common Google/Gemini API key forms even
+# if someone accidentally pastes a key into an otherwise normal tracked source file.
+$oldPreference=$ErrorActionPreference
+try {
+  $ErrorActionPreference='Continue'
+  $patch=@(& $git.Source -C $Root diff --cached --no-ext-diff --unified=0 -- . ':(exclude)*.lock' 2>&1) -join "`n"
+  $rc=$LASTEXITCODE
+} finally {
+  $ErrorActionPreference=$oldPreference
+}
+if($rc -ne 0){ throw 'Could not inspect staged Git content for secrets.' }
+if($patch -match '(?im)^\+.*(?:AQ\.[A-Za-z0-9_-]{20,}|AIza[A-Za-z0-9_-]{20,})'){
+  Write-Host '[BLOCKED] A Google/Gemini API key pattern was detected in staged tracked content.' -ForegroundColor Red
+  Write-Host 'Keep API keys only in LOCAL_ONLY_SECRETS or Windows-local persistent settings.' -ForegroundColor Red
+  exit 4
+}
+
+Write-Host '[OK] Git staging safety check passed. Private data and API-key patterns are blocked.' -ForegroundColor Green
 exit 0

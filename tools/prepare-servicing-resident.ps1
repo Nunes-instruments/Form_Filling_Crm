@@ -14,15 +14,31 @@ $sharedData = Join-Path $stateRoot 'ServiceData'
 $runtimeBase = Join-Path $stateRoot 'ServicingRuntimeV5'
 New-Item -ItemType Directory -Force -Path $stateRoot,$residentDir,$sharedData,$runtimeBase | Out-Null
 
-# Read the source signature defensively. Older package/setup combinations could accidentally
-# leave extra command-line text or hidden characters in SOURCE_SIGNATURE.txt. Using that raw
-# value as a folder name makes Test-Path throw "Illegal characters in path". V6.5.13 never
-# trusts the signature as a Windows path segment until it has been normalized.
+# V6.6.1 STALE-RUNTIME FIX:
+# Calculate the Servicing runtime identity from the ACTUAL source files whenever an
+# update is prepared. Older builds trusted SOURCE_SIGNATURE.txt alone; if source code
+# changed but that marker was not regenerated, Windows reused the previous local
+# Servicing runtime and the Desktop icon appeared to open an older version.
 $signatureFile = Join-Path $sourceApp 'SOURCE_SIGNATURE.txt'
+$hashHelper = Join-Path $sourceApp 'scripts\get-source-hash.ps1'
 $sourceSigRaw = ''
-try { $sourceSigRaw = [string](Get-Content -LiteralPath $signatureFile -Raw -ErrorAction Stop) }
-catch { throw 'Servicing source signature is missing or unreadable.' }
+
+if (Test-Path -LiteralPath $hashHelper -PathType Leaf) {
+  try {
+    $computedLines = @(& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $hashHelper -AppDir $sourceApp 2>$null)
+    if ($LASTEXITCODE -eq 0 -and $computedLines.Count -gt 0) {
+      $sourceSigRaw = [string]($computedLines | Select-Object -Last 1)
+    }
+  } catch {}
+}
+
+# Compatibility fallback for older packages that do not contain the hash helper.
+if ([string]::IsNullOrWhiteSpace($sourceSigRaw)) {
+  try { $sourceSigRaw = [string](Get-Content -LiteralPath $signatureFile -Raw -ErrorAction Stop) }
+  catch { throw 'Servicing source signature is missing or unreadable.' }
+}
 if ([string]::IsNullOrWhiteSpace($sourceSigRaw)) { throw 'Servicing source signature is missing.' }
+
 $sourceSigCandidate = (($sourceSigRaw -replace "`0", '').Trim() -split "`r?`n")[0].Trim()
 if ($sourceSigCandidate -match '^[0-9A-Fa-f]{40,128}$') {
   $sourceSig = $sourceSigCandidate.ToLowerInvariant()
@@ -34,6 +50,16 @@ if ($sourceSigCandidate -match '^[0-9A-Fa-f]{40,128}$') {
     $sourceSig = ([System.BitConverter]::ToString($sha256.ComputeHash($sigBytes))).Replace('-', '').ToLowerInvariant()
   } finally { $sha256.Dispose() }
 }
+
+# Diagnostic only: a stale marker no longer decides which build is used.
+try {
+  if (Test-Path -LiteralPath $signatureFile -PathType Leaf) {
+    $declared = (([string](Get-Content -LiteralPath $signatureFile -Raw)).Trim() -split "`r?`n")[0].Trim().ToLowerInvariant()
+    if ($declared -and $declared -ne $sourceSig) {
+      Write-Host '[Servicing] Source changed since the saved signature. Building the latest runtime automatically.' -ForegroundColor Yellow
+    }
+  }
+} catch {}
 
 function Test-SafeFile([string]$Path) {
   try { return (-not [string]::IsNullOrWhiteSpace($Path)) -and [System.IO.File]::Exists($Path) } catch { return $false }

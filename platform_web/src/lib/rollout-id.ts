@@ -1,2 +1,4 @@
-﻿// Build-time rollout ID. The live update engine temporarily replaces this file, builds, then restores it so Git stays clean.
-export const NUNES_ROLLOUT_ID = "20260918093952-6.6.0-f777a1e4";
+// Baseline rollout ID for the single-source VS Code/GitHub release.
+// F_APPLY_VSCODE_CHANGES_LIVE.bat temporarily replaces this value during build
+// and restores this tracked source afterward so Git stays clean.
+export const NUNES_ROLLOUT_ID = "20260917-single-source-01";

@@ -1,0 +1,17 @@
+NUNES V6.6.5 - GEMINI RESTART SELF-HEAL
+
+Root cause fixed
+- V6.6.4 correctly wrote the Gemini key to ServiceData and the DPAPI secret store.
+- The restart command used an escaped pipe in a PowerShell command, so NETSTAT printed its help screen instead of reliably identifying/stopping the listener on port 5055.
+- The old hot Servicing process therefore stayed alive with its old in-memory settings and reported Configured:false.
+
+V6.6.5 changes
+- Robustly finds and stops the actual LISTENING PID on port 5055 with Get-NetTCPConnection and a netstat fallback.
+- Copies the corrected resident launcher into LOCALAPPDATA before restart.
+- Resident launcher self-heals: if a permanent Gemini secret exists but /gemini-status says configured:false, it restarts itself once so GEMINI_API_KEY is injected.
+- Keeps gemini-3.6-flash as the production model.
+- Does not delete Purchasing or Servicing data.
+- Removes the plaintext bootstrap key only after a successful live Gemini test.
+
+Run
+Right-click K_APPLY_DEFAULT_GEMINI_V6_6_5.bat -> Run as administrator.
