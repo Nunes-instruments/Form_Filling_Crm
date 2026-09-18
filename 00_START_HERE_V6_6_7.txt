@@ -1,0 +1,30 @@
+NUNES V6.6.7 - WHATSAPP EASY CONNECT + SIMPLE DASHBOARD
+========================================================
+
+USE THIS FILE ON THE MAIN SERVER PC:
+
+  M_APPLY_WHATSAPP_DASHBOARD_V6_6_7.bat
+
+Right-click -> Run as Administrator.
+
+What this update changes ONLY:
+1. WhatsApp Web connection / visible login speed.
+2. WhatsApp connection wording and one large Connect WhatsApp Now button.
+3. Dashboard readability: medium-large text, cleaner bars and graph labels.
+4. Sidebar version display updated to V6.6.7.
+
+What is NOT changed:
+- Purchasing workflow/data
+- Servicing workflow/data
+- Gmail setup
+- Gemini setup/key
+- Existing WhatsApp saved login data
+- Staff login/network design
+- Existing reports/forms logic
+
+After the main server update:
+- Main server: open Servicing -> Settings -> Connect WhatsApp Now.
+- Staff PCs: NO ZIP / NO reinstall. Refresh / Ctrl+R only.
+
+When confirmed working, run G_SAVE_TO_GITHUB.bat and use this version note:
+  V6.6.7 WhatsApp easy connect + dashboard readability

@@ -1,0 +1,22 @@
+NUNES V6.6.7
+============
+Main platform      : 6.6.7
+Servicing          : 1.1.38
+WhatsApp sidecar   : 3.4.0
+
+WhatsApp fix
+------------
+- Explicit Connect click no longer waits behind a slow hidden Chromium restore.
+- Existing hidden WhatsApp browser is terminated quickly before visible login starts.
+- Hidden saved-session restore times out quickly and changes to Connect needed instead of hanging.
+- Passive Settings status polling no longer starts/restarts WhatsApp by itself.
+- One large Connect WhatsApp Now action with immediate UI feedback.
+- Existing linked session is preserved unless the user explicitly disconnects/relinks.
+
+Dashboard readability
+---------------------
+- Existing dashboard data/logic unchanged.
+- Existing Purchasing vs Servicing bar graph retained.
+- Added simple status progress bars below the workload graph.
+- Dashboard headings, KPI values, labels, period totals, tables and graph labels are medium-large.
+- No unrelated module/workflow changes.

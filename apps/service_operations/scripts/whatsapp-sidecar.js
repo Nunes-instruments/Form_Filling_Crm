@@ -9,8 +9,9 @@ const http = require('http');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
+const { spawn } = require('child_process');
 
-const VERSION = '3.3.0';
+const VERSION = '3.4.0';
 const ENGINE = 'WhatsAppWebLink';
 const PORT = Number(process.env.WHATSAPP_SIDECAR_PORT || 5056);
 const LOCALAPPDATA = process.env.LOCALAPPDATA || path.join(process.cwd(), 'data');
@@ -98,6 +99,36 @@ async function destroyClient() {
   try { await current.destroy(); } catch (_) {}
 }
 
+// V6.6.7: an explicit owner click must not sit behind a slow hidden restore.
+// Stop the existing Chromium immediately, release the WhatsApp profile lock,
+// and let the visible login window start without waiting several seconds.
+async function destroyClientFast() {
+  const current = client;
+  client = null;
+  visibleClientStarting = false;
+  if (!current) return;
+  try {
+    const proc = current?.pupBrowser?.process?.();
+    if (proc?.pid) {
+      try { proc.kill('SIGKILL'); } catch (_) {
+        if (process.platform === 'win32') {
+          try {
+            const killer = spawn('taskkill.exe', ['/PID', String(proc.pid), '/T', '/F'], {
+              windowsHide: true, detached: true, stdio: 'ignore'
+            });
+            killer.unref();
+          } catch (_) {}
+        }
+      }
+    }
+  } catch (_) {}
+  try {
+    const closing = current.destroy();
+    if (closing && typeof closing.catch === 'function') closing.catch(() => {});
+  } catch (_) {}
+  await new Promise(resolve => setTimeout(resolve, 90));
+}
+
 function scheduleHiddenRestart(delayMs = 1200) {
   if (restartTimer || manualShutdown || !hasLinkedSession()) return;
   restartTimer = setTimeout(() => {
@@ -118,9 +149,16 @@ async function ensureClient(visibleLogin = false, force = false) {
     return;
   }
   if (starting) {
-    await starting;
-    if (visibleLogin && state !== 'READY' && !loginBrowserOpen && !visibleClientStarting) return ensureClient(true, true);
-    return;
+    if (visibleLogin) {
+      // Do not let an explicit owner click wait for the hidden restore launch gate.
+      // Bump the generation so the older initializer exits at its next checkpoint.
+      generation += 1;
+      starting = null;
+      await destroyClientFast();
+    } else {
+      await starting;
+      return;
+    }
   }
 
   starting = (async () => {
@@ -130,8 +168,11 @@ async function ensureClient(visibleLogin = false, force = false) {
 
     if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
     const currentGeneration = ++generation;
-    await destroyClient();
+    if (visibleLogin) await destroyClientFast();
+    else await destroyClient();
+    if (currentGeneration !== generation) return;
     await fsp.mkdir(AUTH_ROOT, { recursive: true });
+    if (currentGeneration !== generation) return;
 
     manualShutdown = false;
     // FAST OPEN: mark the explicit login request as opening immediately, instead of
@@ -166,7 +207,7 @@ async function ensureClient(visibleLogin = false, force = false) {
           '--window-size=1280,900'
         ]
       },
-      authTimeoutMs: visibleLogin ? 0 : 20000,
+      authTimeoutMs: visibleLogin ? 0 : 9000,
       qrMaxRetries: 0,
       takeoverOnConflict: true,
       takeoverTimeoutMs: 0
@@ -243,25 +284,36 @@ async function ensureClient(visibleLogin = false, force = false) {
       }
     });
 
-    // initialize waits for authentication. Release the launch gate so an expired
-    // hidden session can be switched to visible login by an explicit user action.
+    // initialize waits for authentication. A stale saved session is allowed only a
+    // short restore window; after that we stop it so the Connect button can open the
+    // visible login immediately instead of waiting behind a hidden Chromium process.
     void (async () => {
-    try {
-      await nextClient.initialize();
-    } catch (error) {
-      if (currentGeneration !== generation) return;
-      const text = error && error.message ? error.message : String(error);
-      loginBrowserOpen = false;
-      if (visibleLogin || !hasLinkedSession()) {
-        loadingMessage = 'WhatsApp Web login could not open';
-        mark('LOGIN_REQUIRED', text);
-      } else {
-        loadingMessage = 'WhatsApp background connection failed';
-        mark('ERROR', text);
-        scheduleHiddenRestart(1800);
+      let restoreTimer = null;
+      if (!visibleLogin) {
+        restoreTimer = setTimeout(() => {
+          if (currentGeneration !== generation || state === 'READY') return;
+          loadingMessage = 'Saved login restore took too long. Click Connect WhatsApp Now.';
+          mark('LOGIN_REQUIRED', 'Saved WhatsApp login could not be restored quickly. Open WhatsApp Web Login once.');
+          void destroyClientFast();
+        }, 9000);
       }
-      await destroyClient();
-    }
+      try {
+        await nextClient.initialize();
+      } catch (error) {
+        if (currentGeneration !== generation) return;
+        const text = error && error.message ? error.message : String(error);
+        loginBrowserOpen = false;
+        if (visibleLogin || !hasLinkedSession()) {
+          loadingMessage = 'WhatsApp Web login could not open';
+          mark('LOGIN_REQUIRED', text);
+        } else {
+          loadingMessage = 'Saved WhatsApp login could not be restored';
+          mark('LOGIN_REQUIRED', text);
+        }
+        await destroyClientFast();
+      } finally {
+        if (restoreTimer) clearTimeout(restoreTimer);
+      }
     })();
   })().finally(() => { starting = null; });
 
@@ -275,7 +327,7 @@ function statusPayload() {
     version: VERSION,
     state,
     ready: state === 'READY',
-    loginRequired: state !== 'READY',
+    loginRequired: ['NOT_STARTED','LOGIN_REQUIRED','DISCONNECTED','ERROR'].includes(state),
     loginMode: 'browser_link',
     loginUrl: LOGIN_URL,
     loginBrowserOpen,
@@ -359,7 +411,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/health') {
       return sendJson(res, 200, {
         service: 'ServiceFlow WhatsApp Runtime', engine: ENGINE, version: VERSION,
-        ok: !runtimeError, state, ready: state === 'READY', loginRequired: state !== 'READY', runtimeError
+        ok: !runtimeError, state, ready: state === 'READY', loginRequired: ['NOT_STARTED','LOGIN_REQUIRED','DISCONNECTED','ERROR'].includes(state), runtimeError
       });
     }
     if (req.method === 'GET' && url.pathname === '/status') {

@@ -1,4 +1,4 @@
-﻿param(
+param(
   [Parameter(Mandatory=$true)][string]$Root,
   [Parameter(Mandatory=$true)][string]$NpmCmd
 )
@@ -30,6 +30,10 @@ function RemovePath([string]$p){
   else { cmd.exe /d /c ('rmdir /S /Q "{0}"' -f $p) | Out-Null }
 }
 function Junction([string]$link,[string]$target){ RemovePath $link; cmd.exe /d /c ('mklink /J "{0}" "{1}"' -f $link,$target) | Out-Null; if(-not (Test-Path -LiteralPath $link)){throw "Could not connect cache: $link"} }
+function IsReparsePoint([string]$p){
+  try { return (Test-Path -LiteralPath $p) -and [bool]((Get-Item -LiteralPath $p -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) }
+  catch { return $false }
+}
 function LockVersion([string]$name){
   try {
     $lock=Get-Content -LiteralPath (Join-Path $Web 'package-lock.json') -Raw | ConvertFrom-Json
@@ -61,55 +65,54 @@ function TestNodeRuntime([string]$nodeModules){
   } catch { return $false }
   return $true
 }
-function InstallRuntime([string]$runtime,[string]$runtimeNode,[bool]$preferOnline=$false){
-  New-Item -ItemType Directory -Force -Path $runtime | Out-Null
-  RemovePath $runtimeNode
-  Copy-Item -LiteralPath (Join-Path $Web 'package.json') -Destination (Join-Path $runtime 'package.json') -Force
-  Copy-Item -LiteralPath (Join-Path $Web 'package-lock.json') -Destination (Join-Path $runtime 'package-lock.json') -Force
-  Push-Location $runtime
+function InstallLocalRuntime([bool]$preferOnline=$false){
+  # IMPORTANT: Next.js 15 records/uses package paths while compiling. A node_modules
+  # junction whose real target is in %%LOCALAPPDATA%% can make Windows/webpack generate
+  # an escaping ../../../../AppData/... import for builtin/global-not-found.js. Keep
+  # node_modules PHYSICALLY inside platform_web. npm's own download cache remains shared,
+  # so repeat installs still benefit from the warm npm cache without path leakage.
+  $nodeModules=Join-Path $Web 'node_modules'
+  RemovePath $nodeModules
+  Push-Location $Web
   try {
     $args=@('ci','--no-audit','--no-fund','--progress=false','--loglevel=error')
     if($preferOnline){ $args += '--prefer-online' } else { $args += '--prefer-offline' }
     & $NpmCmd @args
     if($LASTEXITCODE -ne 0){ throw 'npm ci failed' }
   } finally { Pop-Location }
-  if(-not (TestNodeRuntime $runtimeNode)){ throw 'Node runtime install completed but required Next.js files are still missing.' }
+  if(IsReparsePoint $nodeModules){ throw 'Dashboard node_modules unexpectedly became a junction/reparse point.' }
+  if(-not (TestNodeRuntime $nodeModules)){ throw 'Local dashboard dependency install completed but required Next.js files are still missing.' }
 }
 
 $depHash=DependencySignature (Join-Path $Web 'package.json')
-$runtime=Join-Path $CacheRoot "runtime\$depHash"
-$runtimeNode=Join-Path $runtime 'node_modules'
 $webNode=Join-Path $Web 'node_modules'
 
-# V6.6.2: Never trust a cache just because next/package.json exists. The previous
-# runtime could be partially extracted and miss Next internal files such as
-# dist/client/components/builtin/global-not-found.js. That exact condition caused
-# the main dashboard build to fail while applying V6.6.1.
-if((Test-Path -LiteralPath $webNode) -and -not (TestNodeRuntime $webNode)){
-  Write-Host '[Dashboard] Removing incomplete project node_modules link/cache.' -ForegroundColor Yellow
+# V6.6.8 ROOT FIX:
+# Previous releases linked platform_web\node_modules to AppData\PlatformCache\runtime.
+# The packages could be complete, but Next.js/webpack on Windows could resolve the
+# junction target and emit ../../../../AppData/.../global-not-found.js. That relative
+# path is wrong from a deeply nested Desktop release folder and the build fails.
+# Remove that old junction and use a normal local node_modules directory.
+if(IsReparsePoint $webNode){
+  Write-Host '[Dashboard] Removing old external node_modules junction (Windows Next.js path fix).' -ForegroundColor Yellow
   RemovePath $webNode
 }
-if((Test-Path -LiteralPath $runtimeNode) -and -not (TestNodeRuntime $runtimeNode)){
-  Write-Host '[Dashboard] Cached Next.js runtime is incomplete. Rebuilding dependency cache.' -ForegroundColor Yellow
-  RemovePath $runtimeNode
+if((Test-Path -LiteralPath $webNode) -and -not (TestNodeRuntime $webNode)){
+  Write-Host '[Dashboard] Local dependencies are incomplete. Reinstalling exact locked packages.' -ForegroundColor Yellow
+  RemovePath $webNode
 }
-
 if(-not (TestNodeRuntime $webNode)){
-  if(TestNodeRuntime $runtimeNode){
-    Junction $webNode $runtimeNode
-  } else {
-    Write-Host '[Dashboard] Installing exact locked dashboard dependencies...' -ForegroundColor Cyan
-    try {
-      InstallRuntime $runtime $runtimeNode $false
-    } catch {
-      Write-Host '[Dashboard] First dependency install was incomplete. Retrying with online verification...' -ForegroundColor Yellow
-      try { & $NpmCmd cache verify | Out-Null } catch {}
-      InstallRuntime $runtime $runtimeNode $true
-    }
-    Junction $webNode $runtimeNode
+  Write-Host '[Dashboard] Installing dashboard dependencies locally inside platform_web...' -ForegroundColor Cyan
+  try {
+    InstallLocalRuntime $false
+  } catch {
+    Write-Host '[Dashboard] First install did not validate. Verifying npm cache and retrying online...' -ForegroundColor Yellow
+    try { & $NpmCmd cache verify | Out-Null } catch {}
+    InstallLocalRuntime $true
   }
 }
-if(-not (TestNodeRuntime $webNode)){ throw 'Dashboard dependency runtime is incomplete after repair.' }
+if(IsReparsePoint $webNode){ throw 'Dashboard dependency path is still external after repair.' }
+if(-not (TestNodeRuntime $webNode)){ throw 'Dashboard local dependency runtime is incomplete after repair.' }
 
 $sourceHash=SourceSignature
 $buildCache=Join-Path $CacheRoot "build-cache\$sourceHash"
@@ -132,21 +135,17 @@ if(-not $currentValid){
   try { & $NpmCmd run build; $buildExit=$LASTEXITCODE } finally { Pop-Location }
 
   if($buildExit -ne 0){
-    # One automatic clean retry. This specifically repairs a partially populated
-    # PlatformCache/runtime without asking the owner to manually delete AppData.
-    Write-Host '[Dashboard] Build failed. Performing one clean dependency/cache repair and retry...' -ForegroundColor Yellow
+    Write-Host '[Dashboard] Build failed. Performing one full LOCAL dependency repair and retry...' -ForegroundColor Yellow
     RemovePath $webBuild
     RemovePath $webNode
-    RemovePath $runtimeNode
     RemovePath $incremental
     try { & $NpmCmd cache verify | Out-Null } catch {}
-    InstallRuntime $runtime $runtimeNode $true
-    Junction $webNode $runtimeNode
-    if(-not (TestNodeRuntime $webNode)){ throw 'Dashboard dependency self-repair failed.' }
+    InstallLocalRuntime $true
+    if(IsReparsePoint $webNode){ throw 'Dashboard dependency repair recreated an external link.' }
     New-Item -ItemType Directory -Force -Path $webBuild | Out-Null
     Push-Location $Web
     try { & $NpmCmd run build; $buildExit=$LASTEXITCODE } finally { Pop-Location }
-    if($buildExit -ne 0){ throw 'Next.js platform build failed after clean dependency retry.' }
+    if($buildExit -ne 0){ throw 'Next.js platform build failed after local dependency retry.' }
   }
 
   if(-not (Test-Path -LiteralPath (Join-Path $webBuild 'BUILD_ID'))){throw 'Next.js build finished without BUILD_ID'}

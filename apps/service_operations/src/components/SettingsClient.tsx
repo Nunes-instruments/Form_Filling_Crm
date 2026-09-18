@@ -65,6 +65,7 @@ export default function SettingsClient({ initialSettings = null }: { initialSett
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [waOpening, setWaOpening] = useState(false);
 
   async function loadSettings() {
     try {
@@ -106,16 +107,36 @@ export default function SettingsClient({ initialSettings = null }: { initialSett
   }
 
   async function openWhatsAppWebLogin() {
-    setError(''); setMessage('Opening WhatsApp Web now…');
+    if (waOpening) return null;
+    setWaOpening(true);
+    setError('');
+    setMessage('Opening WhatsApp Web now…');
+    // Give instant visual feedback before the server call finishes. The backend
+    // then force-switches any slow hidden restore to the visible login window.
+    setComm(prev=>({
+      ...prev,
+      whatsapp:{
+        ...(prev.whatsapp || { state:'NOT_STARTED', ready:false, loginRequired:true }),
+        state:'LOGIN_BROWSER_OPEN',
+        ready:false,
+        loginRequired:false,
+        loginBrowserOpen:true,
+        lastError:''
+      }
+    }));
     try {
       const data = await fetchJson(`/api/whatsapp/prepare?ts=${Date.now()}`, { method:'POST' });
       setComm(prev=>({...prev, whatsapp:data}));
       if (data.state === 'ERROR' || data.state === 'NOT_STARTED') throw new Error(data.lastError || 'WhatsApp login could not start.');
-      setMessage(data.ready ? 'WhatsApp connected.' : data.loginBrowserOpen ? 'WhatsApp Web login window is open on the main-server PC. Complete the link there.' : 'Opening WhatsApp Web on the main-server PC. Waiting for the login window…');
+      setMessage(data.ready
+        ? 'WhatsApp connected.'
+        : 'WhatsApp Web is opening on the main-server PC. Complete the one-time link there.');
       return data as WhatsAppStatus;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'WhatsApp Web login could not be opened.');
       return null;
+    } finally {
+      window.setTimeout(()=>setWaOpening(false), 500);
     }
   }
 
@@ -132,7 +153,7 @@ export default function SettingsClient({ initialSettings = null }: { initialSett
     void loadEmail();
     // V21: restore an already-linked WhatsApp Web session silently. First-time
     // login is opened only when the owner presses Open WhatsApp Web Login.
-    void loadWhatsApp(true);
+    void loadWhatsApp(false);
   },[]);
 
   useEffect(()=>{
@@ -140,7 +161,7 @@ export default function SettingsClient({ initialSettings = null }: { initialSett
     let timer: ReturnType<typeof setTimeout> | undefined;
     const poll = async () => {
       if (cancelled) return;
-      const latest = await loadWhatsApp(true);
+      const latest = await loadWhatsApp(false);
       if (cancelled) return;
       // V21 no longer waits for an app-generated QR. Poll modestly while the
       // official login window/authentication is active, then back off when stable.
@@ -207,7 +228,7 @@ export default function SettingsClient({ initialSettings = null }: { initialSett
     try {
       const data = await fetchJson('/api/communication/status',{method:'POST'});
       setComm(prev=>({...prev, ...data, whatsapp:prev.whatsapp}));
-      void loadWhatsApp(true);
+      void loadWhatsApp(false);
       if (data.email?.status === 'READY') setMessage(`Google Gmail connected — ${data.email.sender}. WhatsApp status refreshed.`);
       else setError(data.email?.detail || 'Google Gmail is not connected.');
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
@@ -301,13 +322,13 @@ export default function SettingsClient({ initialSettings = null }: { initialSett
       </div>
     </section>
 
-    <section className="panel">
-      <div className="sectionHead"><div><span className="step">05</span><div><h2>WhatsApp Web Login</h2><p>Link the main-server PC once using the official WhatsApp Web page. The saved browser session is then reused automatically after Save & Preview.</p></div></div><span className={`connectionBadge ${wa?.ready?'connected':''}`}><MessageCircle size={16}/>{wa?.ready ? 'Connected' : wa?.loginBrowserOpen ? 'Login window open' : 'Login required'}</span></div>
+    <section className="panel whatsappEasyConnect">
+      <div className="sectionHead"><div><span className="step">05</span><div><h2>WhatsApp Web</h2><p>One-time connection on the main-server PC. After that, Save & Preview reuses the saved session automatically.</p></div></div><span className={`connectionBadge ${wa?.ready?'connected':''}`}><MessageCircle size={16}/>{wa?.ready ? 'Connected' : waOpening || wa?.loginBrowserOpen ? 'Opening…' : wa?.state === 'STARTING' || wa?.state === 'AUTHENTICATED' ? 'Connecting…' : 'Connect needed'}</span></div>
       <div className="whatsappLoginGrid">
-        <div className="commSettingsCard"><b>Status</b><p>{wa?.ready ? `Connected${wa.connectedNumber ? ` as +${wa.connectedNumber}` : ''}.` : wa?.state === 'LOGIN_BROWSER_OPEN' ? 'Official WhatsApp Web is open on the main-server PC. Complete the one-time link there.' : wa?.state === 'AUTHENTICATED' ? 'WhatsApp authenticated. Preparing the connection…' : wa?.state === 'STARTING' ? 'Restoring the saved WhatsApp Web login…' : (wa?.lastError || 'Not linked yet. Open WhatsApp Web Login once on the main-server PC.')}</p><div className="settingsActions"><button className="button" type="button" onClick={()=>void loadWhatsApp(true)}><RefreshCw size={16}/> Refresh</button><button className={wa?.ready ? 'button dangerText' : 'button primary'} type="button" onClick={()=>void (wa?.ready ? logoutWhatsApp() : openWhatsAppWebLogin())} disabled={checking}><LogIn size={16}/>{wa?.ready ? 'Disconnect / Relink' : 'Open WhatsApp Web Login'}</button></div></div>
-        <div className="whatsappQrCard">{wa?.ready ? <div className="whatsappReady"><Check size={42}/><b>WhatsApp ready</b><span>Save & Preview can send automatically using this saved session.</span></div> : <div className="whatsappReady"><LogIn size={34}/><b>{wa?.loginBrowserOpen ? 'Complete login in WhatsApp Web' : 'Link WhatsApp Web once'}</b><span>Click Open WhatsApp Web Login. In the official WhatsApp page use its normal QR or “Link with phone number”. After linking, the window minimizes and stays connected. Leave it running.</span></div>}</div>
+        <div className="commSettingsCard whatsappConnectCard"><b>Status</b><p>{wa?.ready ? `Connected${wa.connectedNumber ? ` as +${wa.connectedNumber}` : ''}. Automatic WhatsApp sending is ready.` : waOpening || wa?.state === 'LOGIN_BROWSER_OPEN' ? 'WhatsApp Web is opening now. Complete the one-time link in the window on this main-server PC.' : wa?.state === 'AUTHENTICATED' ? 'WhatsApp authenticated. Finishing connection…' : wa?.state === 'STARTING' ? 'Checking the saved WhatsApp login…' : (wa?.lastError || 'WhatsApp is not linked yet.')}</p><div className="settingsActions whatsappPrimaryActions"><button className="button" type="button" onClick={()=>void loadWhatsApp(false)} disabled={waOpening}><RefreshCw size={16}/> Refresh</button><button className={wa?.ready ? 'button dangerText whatsappConnectButton' : 'button primary whatsappConnectButton'} type="button" onClick={()=>void (wa?.ready ? logoutWhatsApp() : openWhatsAppWebLogin())} disabled={checking || waOpening}><LogIn size={18}/>{wa?.ready ? 'Disconnect / Relink' : waOpening ? 'Opening WhatsApp…' : 'Connect WhatsApp Now'}</button></div></div>
+        <div className="whatsappQrCard">{wa?.ready ? <div className="whatsappReady"><Check size={42}/><b>WhatsApp ready</b><span>Saved session is active. No setup is needed on staff PCs.</span></div> : <div className="whatsappReady"><LogIn size={36}/><b>{waOpening || wa?.loginBrowserOpen ? 'Finish login in WhatsApp Web' : 'Easy one-time connection'}</b><span>Press Connect WhatsApp Now. Use the normal QR or “Link with phone number”. After linking, the app keeps the session for automatic sending.</span></div>}</div>
       </div>
-      <div className="settingsActions"><span className="privacyNote"><ShieldCheck size={16}/> WhatsApp login is stored only on the main-server PC. Company records and Service history are not part of the browser login profile.</span></div>
+      <div className="settingsActions"><span className="privacyNote"><ShieldCheck size={16}/> WhatsApp login stays on the main-server PC. Staff PCs use the same server connection.</span></div>
     </section>
   </div>;
 }

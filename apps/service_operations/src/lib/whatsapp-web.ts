@@ -95,23 +95,23 @@ export async function getWhatsAppWebStatus(initialize = true): Promise<SidecarSt
 }
 
 async function replayPrepareInBackground() {
-  const deadline = Date.now() + 8000;
+  const deadline = Date.now() + 10000;
   while (Date.now() < deadline) {
     try {
-      const response = await sidecarFetch('/prepare', { method: 'POST', body: '{}' }, 650);
+      const response = await sidecarFetch('/prepare', { method: 'POST', body: '{}' }, 400);
       if (response.ok) return;
     } catch { /* resident is still starting */ }
-    await new Promise(resolve => setTimeout(resolve, 120));
+    await new Promise(resolve => setTimeout(resolve, 90));
   }
 }
 
 export async function prepareWhatsAppWeb(): Promise<SidecarStatus> {
-  // V6.6.6 FAST OPEN: never keep the button waiting for Chromium/WhatsApp page load.
+  // V6.6.7 EASY CONNECT: never keep the button waiting for a slow hidden restore or Chromium page load.
   // If the resident is warm this returns in a few milliseconds. If Windows has to
   // start the resident, return STARTING immediately and replay /prepare in the
   // background until the resident accepts it. The UI polls local status separately.
   try {
-    const response = await sidecarFetch('/prepare', { method: 'POST', body: '{}' }, 650);
+    const response = await sidecarFetch('/prepare', { method: 'POST', body: '{}' }, 400);
     if (!response.ok) throw new Error(`runtime HTTP ${response.status}`);
     return await response.json() as SidecarStatus;
   } catch {

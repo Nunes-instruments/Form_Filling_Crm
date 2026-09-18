@@ -1,0 +1,57 @@
+NUNES OPERATIONS V6.6.8
+=======================
+
+WHY THIS VERSION EXISTS
+-----------------------
+V6.6.7 could fail during Main Dashboard compilation with:
+  Module not found ... AppData\Local\NUNES Operations\PlatformCache\runtime\...\node_modules\next\dist\client\components\builtin\global-not-found.js
+
+ROOT CAUSE
+----------
+The old dashboard installer used a Windows junction from:
+  platform_web\node_modules
+into:
+  %LOCALAPPDATA%\NUNES Operations\PlatformCache\runtime\...
+
+Next.js 15 / webpack can resolve that junction to its external real path while compiling.
+For a deeply nested Desktop release folder, the generated ../../../../AppData path can be wrong.
+The packages can exist and still fail to resolve during build.
+
+V6.6.8 FIX
+----------
+- node_modules is now a NORMAL PHYSICAL folder inside platform_web during build.
+- The old AppData node_modules junction is automatically removed.
+- npm's download cache remains reusable, so package downloads can still be warm.
+- The exact Next.js locked version is verified.
+- global-not-found.js is verified before build.
+- One automatic clean reinstall/retry is retained.
+- Existing V6.6.7 WhatsApp Easy Connect behavior and dashboard UI are preserved.
+- Purchasing / Servicing / Gmail / Gemini / WhatsApp persistent data are not intentionally deleted.
+
+RUN ON MAIN SERVER PC ONLY
+--------------------------
+Right-click:
+  N_REPAIR_BUILD_AND_APPLY_V6_6_8.bat
+Choose Run as administrator.
+
+FIRST RUN NOTE
+--------------
+The first V6.6.8 repair can take a few minutes because the dashboard dependencies are installed locally once.
+Do not close the black window during npm ci / next build.
+
+EXPECTED SUCCESS
+----------------
+[OK] Next.js dependencies are local and complete.
+Main Version       : 6.6.8
+Servicing Version  : 1.1.38
+WhatsApp Runtime   : 3.4.0
+[OK] V6.6.8 IS LIVE.
+
+AFTER SUCCESS
+-------------
+Test Dashboard, then Servicing -> Settings -> Connect WhatsApp Now.
+Staff PCs do not need this ZIP. Refresh / Ctrl+R only.
+
+Only after successful testing, use G_SAVE_TO_GITHUB.bat.
+Suggested version note:
+  V6.6.8 fix Next Windows build path + keep WhatsApp easy connect

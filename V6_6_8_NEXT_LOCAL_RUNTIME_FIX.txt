@@ -1,0 +1,4 @@
+V6.6.8 fixes the Windows Next.js build-path problem caused by using an external
+AppData junction for platform_web\node_modules. The dashboard now compiles with
+physical local dependencies while keeping npm's own cache reusable. V6.6.7
+WhatsApp Easy Connect and dashboard readability changes remain unchanged.
