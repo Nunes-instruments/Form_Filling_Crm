@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSettings } from '@/lib/db';
 import { normalizeGeminiModel } from '@/lib/gemini-model';
+import { generateContentResilient } from '@/lib/gemini-resilient';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -64,21 +65,37 @@ export async function POST(request:Request){
     const body=await request.json();
     const file=parseDataUrl(body?.fileDataUrl);
     if(!file)return NextResponse.json({error:'Purchasing form image/PDF is missing, unsupported, or too large.'},{status:400});
-    const model=normalizeGeminiModel(settings.formVisionModel||process.env.GEMINI_MODEL);
-    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),30000);
-    let response:Response;
-    try{
-      response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{
-        method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},
-        body:JSON.stringify({contents:[{role:'user',parts:[{inlineData:{mimeType:file.mimeType,data:file.data}},{text:PROMPT}]}],generationConfig:{maxOutputTokens:3500,responseMimeType:'application/json',responseSchema:RESPONSE_SCHEMA}}),
-        signal:controller.signal
-      });
-    }finally{clearTimeout(timer);}
-    const raw=await response.json().catch(()=>({}));
-    if(!response.ok)return NextResponse.json({error:raw?.error?.message||`Gemini Vision request failed with HTTP ${response.status}.`,code:'GEMINI_REQUEST_FAILED'},{status:502});
-    const text=stripFence(responseText(raw));
-    if(!text)return NextResponse.json({error:'Gemini Vision returned no purchasing data.',code:'GEMINI_EMPTY'},{status:502});
-    let parsed:any;try{parsed=JSON.parse(text)}catch{return NextResponse.json({error:'Gemini Vision returned unreadable purchasing data.',code:'GEMINI_BAD_JSON'},{status:502})}
+
+    const primaryModel=normalizeGeminiModel(settings.formVisionModel||process.env.GEMINI_MODEL);
+    const gemini=await generateContentResilient({
+      apiKey,
+      primaryModel,
+      requestBody:{
+        contents:[{role:'user',parts:[{inlineData:{mimeType:file.mimeType,data:file.data}},{text:PROMPT}]}],
+        generationConfig:{maxOutputTokens:3500,responseMimeType:'application/json',responseSchema:RESPONSE_SCHEMA}
+      },
+      attemptTimeoutMs:18000,
+      maxTotalMs:45000
+    });
+
+    if(!gemini.ok){
+      const raw=gemini.raw||{};
+      const friendly=String(raw?.nunesFriendlyError||gemini.lastError||raw?.error?.message||'Gemini Vision request failed.');
+      const auth=[401,403].includes(gemini.status);
+      return NextResponse.json({
+        error:friendly,
+        code:auth?'GEMINI_AUTH_ERROR':gemini.transient?'GEMINI_TEMPORARILY_BUSY':'GEMINI_REQUEST_FAILED',
+        attempts:gemini.attempts,
+        model:gemini.model
+      },{status:auth?502:gemini.transient?503:502});
+    }
+
+    const text=stripFence(responseText(gemini.raw));
+    if(!text)return NextResponse.json({error:'Gemini Vision returned no purchasing data.',code:'GEMINI_EMPTY',attempts:gemini.attempts,model:gemini.model},{status:502});
+    let parsed:any;
+    try{parsed=JSON.parse(text)}
+    catch{return NextResponse.json({error:'Gemini Vision returned unreadable purchasing data.',code:'GEMINI_BAD_JSON',attempts:gemini.attempts,model:gemini.model},{status:502})}
+
     const items=Array.isArray(parsed.items)?parsed.items.slice(0,25).map((x:any)=>({
       itemName:String(x?.itemName||'').trim(),model:String(x?.model||'').trim(),qty:String(x?.qty||'').trim(),
       itemValue:String(x?.itemValue||'').trim(),addCharge:String(x?.addCharge||'').trim()
@@ -92,11 +109,15 @@ export async function POST(request:Request){
       serviceAmount:String(parsed.serviceAmount||'').trim(),items,
       overallConfidence:Number(parsed.overallConfidence||0),
       needsReview:Array.isArray(parsed.needsReview)?parsed.needsReview.map(String):[],
-      provider:'gemini',model
+      provider:'gemini',
+      model:gemini.model,
+      primaryModel,
+      fallbackUsed:gemini.fallbackUsed,
+      attempts:gemini.attempts
     });
   }catch(error){
     const message=error instanceof Error?error.message:String(error);
-    const timeout=/aborted|abort/i.test(message);
-    return NextResponse.json({error:timeout?'Gemini Vision timed out. Retry with a clear full-page photo.':message,code:timeout?'GEMINI_TIMEOUT':'GEMINI_ERROR'},{status:502});
+    const timeout=/aborted|abort|timed out/i.test(message);
+    return NextResponse.json({error:timeout?'Gemini Vision timed out after automatic retry. Please try once more.':message,code:timeout?'GEMINI_TIMEOUT':'GEMINI_ERROR'},{status:502});
   }
 }
