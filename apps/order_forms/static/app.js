@@ -188,3 +188,76 @@
   void loadGallery();
 })();
 /* NUNES V2.8.6.4 MULTI PROOF */
+
+/* NUNES V2.8.6.5 ADB USB PHONE BRIDGE */
+(()=>{
+  const panel=document.querySelector("[data-purchase-camera]");
+  if(!panel || panel.querySelector("[data-purchase-usb-scan]"))return;
+  const match=location.pathname.match(/\/order\/(\d+)(?:\/|$)/);
+  if(!match)return;
+  const oid=match[1];
+  const actions=panel.querySelector(".purchase-capture-actions");
+  const status=panel.querySelector("#purchaseCameraStatus");
+  const scanInput=panel.querySelector("#purchaseScanFile");
+  const proofInput=panel.querySelector("#purchaseProofFile");
+  if(!actions||!status||!scanInput||!proofInput)return;
+
+  const scanBtn=document.createElement("button");
+  scanBtn.type="button";scanBtn.className="btn";scanBtn.dataset.purchaseUsbScan="1";
+  scanBtn.textContent="USB Phone Scan (Developer)";
+  const proofBtn=document.createElement("button");
+  proofBtn.type="button";proofBtn.className="btn";proofBtn.dataset.purchaseUsbProof="1";
+  proofBtn.textContent="USB Phone Proof (Developer)";
+  actions.append(scanBtn,proofBtn);
+
+  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  function assignFile(input,file){
+    const dt=new DataTransfer();
+    dt.items.add(file);
+    input.files=dt.files;
+    input.dispatchEvent(new Event("change",{bubbles:true}));
+  }
+  async function runUsb(mode){
+    scanBtn.disabled=true;proofBtn.disabled=true;
+    status.textContent="Checking Android USB debugging connection...";
+    status.className="purchase-camera-status working";
+    try{
+      const r=await fetch(`/order/${oid}/usb-phone/start`,{method:"POST",cache:"no-store"});
+      const data=await r.json().catch(()=>({}));
+      if(!r.ok||!data.ok){
+        const code=String(data.code||"");
+        if(code==="USB_DEBUGGING_UNAUTHORIZED")throw new Error('Phone detected but not authorized. Unlock phone, tap "Allow USB debugging", tick "Always allow from this computer", then retry.');
+        if(code==="NO_ADB_DEVICE")throw new Error("No authorized USB-debugging phone found. Turn ON USB debugging, reconnect cable, unlock phone, and authorize this PC.");
+        if(code==="ADB_NOT_INSTALLED")throw new Error("NUNES USB Phone Bridge is not installed. Run V2.8.6.5 one-time setup on Main Server.");
+        throw new Error(data.error||`USB bridge failed (${r.status})`);
+      }
+      const sid=String(data.session?.id||"");
+      if(!sid)throw new Error("USB phone session was not created.");
+      status.textContent="Phone camera page opened through USB. On first use allow Camera permission, then tap Capture & Send.";
+      for(let i=0;i<240;i++){
+        await wait(500);
+        const sr=await fetch(`/order/${oid}/usb-phone/session/${encodeURIComponent(sid)}`,{cache:"no-store"});
+        if(sr.status===404)continue;
+        const s=await sr.json().catch(()=>({}));
+        if(s.status==="error")throw new Error(s.error||"Phone capture failed.");
+        if(s.ready||s.status==="ready"){
+          const fr=await fetch(`/order/${oid}/usb-phone/session/${encodeURIComponent(sid)}/file`,{cache:"no-store"});
+          if(!fr.ok)throw new Error(`Captured phone image fetch failed (${fr.status})`);
+          const blob=await fr.blob();
+          const file=new File([blob],`purchase-usb-phone-${Date.now()}.jpg`,{type:blob.type||"image/jpeg"});
+          status.textContent="Phone photo received. Applying it to Purchasing...";
+          assignFile(mode==="scan"?scanInput:proofInput,file);
+          return;
+        }
+      }
+      throw new Error("Timed out waiting for phone capture. Keep phone unlocked and tap Capture & Send.");
+    }catch(e){
+      status.textContent=e instanceof Error?e.message:String(e);
+      status.className="purchase-camera-status error";
+    }finally{
+      scanBtn.disabled=false;proofBtn.disabled=false;
+    }
+  }
+  scanBtn.addEventListener("click",()=>void runUsb("scan"));
+  proofBtn.addEventListener("click",()=>void runUsb("proof"));
+})();

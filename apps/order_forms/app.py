@@ -1582,6 +1582,55 @@ def purchase_attachment_file(oid,name):
     if not p.exists() or not p.is_file(): return ("Not found",404)
     return send_file(p)
 
+# NUNES V2.8.6.5 USB DEBUGGING PHONE BRIDGE
+def _service_usb_json(path, method="GET"):
+    url="http://127.0.0.1:5055"+path
+    data=b"{}" if method=="POST" else None
+    req=urllib.request.Request(url,data=data,method=method,headers={"Content-Type":"application/json","User-Agent":"NUNES-Purchasing-USB-Phone/2.8.6.5"})
+    try:
+        with urllib.request.urlopen(req,timeout=12) as resp:
+            raw=resp.read().decode("utf-8","ignore")
+            return (json.loads(raw or "{}"),resp.status)
+    except urllib.error.HTTPError as exc:
+        raw=exc.read().decode("utf-8","ignore")
+        try: payload=json.loads(raw or "{}")
+        except Exception: payload={"error":raw or f"USB phone bridge failed ({exc.code})."}
+        return (payload,exc.code)
+    except Exception as exc:
+        return ({"error":f"USB phone bridge is unavailable: {exc}","code":"USB_PHONE_PROXY_UNAVAILABLE"},503)
+
+@app.post("/order/<int:oid>/usb-phone/start")
+@login_required
+def purchase_usb_phone_start(oid):
+    if not _purchase_order_exists(oid): return jsonify(error="Purchasing order not found."),404
+    payload,status=_service_usb_json("/api/phone-usb/start","POST")
+    return jsonify(payload),status
+
+@app.get("/order/<int:oid>/usb-phone/session/<sid>")
+@login_required
+def purchase_usb_phone_session(oid,sid):
+    if not _purchase_order_exists(oid): return jsonify(error="Purchasing order not found."),404
+    safe="".join(ch for ch in sid if ch.isalnum() or ch in "-_")[:100]
+    if not safe: return jsonify(error="Invalid USB phone session."),400
+    payload,status=_service_usb_json(f"/api/phone-usb/session/{safe}")
+    return jsonify(payload),status
+
+@app.get("/order/<int:oid>/usb-phone/session/<sid>/file")
+@login_required
+def purchase_usb_phone_file(oid,sid):
+    if not _purchase_order_exists(oid): return ("Purchasing order not found.",404)
+    safe="".join(ch for ch in sid if ch.isalnum() or ch in "-_")[:100]
+    if not safe: return ("Invalid USB phone session.",400)
+    req=urllib.request.Request(f"http://127.0.0.1:5055/api/phone-usb/session/{safe}/file",headers={"User-Agent":"NUNES-Purchasing-USB-Phone/2.8.6.5"})
+    try:
+        with urllib.request.urlopen(req,timeout=12) as resp:
+            raw=resp.read()
+            return raw,resp.status,{"Content-Type":resp.headers.get("Content-Type","image/jpeg"),"Cache-Control":"no-store"}
+    except urllib.error.HTTPError as exc:
+        return exc.read(),exc.code,{"Content-Type":exc.headers.get("Content-Type","text/plain")}
+    except Exception as exc:
+        return (f"USB phone bridge is unavailable: {exc}",503)
+
 @app.route("/health")
 def health():
     raw = str(BASE.resolve()).casefold().encode("utf-8", "ignore")
