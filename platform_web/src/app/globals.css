@@ -377,3 +377,11 @@ body{font-size:14px;line-height:1.5;letter-spacing:-.003em}
 .simple-settings-apps{display:grid;gap:10px}.simple-settings-apps>article{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;border:1px solid #e8edf3;border-radius:12px;padding:14px 15px;background:#fff}.simple-settings-apps>article>div>span{display:block;font-size:15px;font-weight:780}.simple-settings-apps>article>div>p{margin:4px 0 0;color:#718096;font-size:13px}.simple-settings-state{font-size:12px;font-weight:800;padding:6px 9px;border-radius:999px;background:#f1f5f9;color:#64748b}.simple-settings-state.ready{background:#edf8f1;color:#15803d}
 .simple-settings-apps .btn{font-size:12px;min-width:74px}
 @media(max-width:900px){.simple-settings-status{grid-template-columns:1fr}.simple-settings-apps>article{grid-template-columns:1fr auto}.simple-settings-apps>article>.btn{grid-column:1/-1;width:100%}}
+
+/* NUNES V2.8.3 COMPLETED TASKS */
+.task-card.completed{border-color:#b7dfc3;background:#fbfffc}
+.priority.completed{background:#e9f8ee;color:#16733a}
+.btn.complete-action{background:#edf9f1;border-color:#b7dfc3;color:#16733a}
+.btn.complete-action:hover{background:#e2f6e8;border-color:#8bc89f;color:#0f5f2e}
+.btn.complete-action svg{width:15px;height:15px}
+.stage-track>span.complete{background:#239451!important}

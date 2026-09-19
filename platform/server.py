@@ -996,10 +996,8 @@ def _build_tasks_payload() -> dict:
                 rows=conn.execute("SELECT * FROM orders ORDER BY updated_at DESC,id DESC LIMIT 250").fetchall()
                 latest_audit=_latest_purchase_audits(conn)
                 for rr in rows:
-                    o=dict(rr); stage,progress=current_purchase_stage(o); status=text(o.get("current_status"),"Draft"); wh=waiting_hours(o.get("updated_at"))
-                    if status=="Completed":
-                        if is_today(o.get("updated_at")): completed_today+=1
-                        continue
+                    o=dict(rr); stage,progress=current_purchase_stage(o); status=text(o.get("current_status"),"Draft"); completed=status.strip().lower()=="completed"; wh=0 if completed else waiting_hours(o.get("updated_at"))
+                    if completed and is_today(o.get("updated_at")): completed_today+=1
                     staff=[]
                     for v in [o.get("marketing_person"),o.get("approved_by")]:
                         v=text(v)
@@ -1007,9 +1005,9 @@ def _build_tasks_payload() -> dict:
                     latest=staff[-1] if staff else ""
                     a=latest_audit.get(int(o.get("id") or 0)) or {}
                     if text(a.get("full_name")): latest=text(a.get("full_name"))
-                    attention=wh>=48
-                    priority="High" if attention else ("Normal" if wh>=12 else "Low")
-                    pitems.append({"id":o.get("id"),"source":"purchasing","record_no":text(o.get("order_name"),f"Order #{o.get('id')}"),"customer":text(o.get("customer_name"),"├óΓé¼ΓÇ¥"),"branch":BRANCH_MAP.get(text(o.get("branch"),"MAIN"),text(o.get("branch"),"MAIN").title()),"current_stage":stage,"status":status,"progress":progress,"responsible_team":stage,"assigned_to":latest,"priority":priority,"updated_at":text(o.get("updated_at")),"waiting_hours":wh,"needs_attention":attention,"action_path":f"/process/purchasing/{o.get('id')}"})
+                    attention=False if completed else wh>=48
+                    priority="Low" if completed else ("High" if attention else ("Normal" if wh>=12 else "Low"))
+                    pitems.append({"id":o.get("id"),"source":"purchasing","record_no":text(o.get("order_name"),f"Order #{o.get('id')}"),"customer":text(o.get("customer_name"),"—"),"branch":BRANCH_MAP.get(text(o.get("branch"),"MAIN"),text(o.get("branch"),"MAIN").title()),"current_stage":"Completed" if completed else stage,"status":status,"progress":100 if completed else progress,"responsible_team":"Completed" if completed else stage,"assigned_to":latest,"priority":priority,"updated_at":text(o.get("updated_at")),"waiting_hours":wh,"needs_attention":attention,"completed":completed,"action_path":f"/process/purchasing/{o.get('id')}"})
             conn.close()
         except Exception: pass
     jobs_path=_service_jobs_path()
@@ -1017,20 +1015,19 @@ def _build_tasks_payload() -> dict:
         try:
             jobs=_service_jobs()
             for j in sorted(jobs,key=lambda x:text(x.get("updatedAt")),reverse=True)[:250]:
-                status=text(j.get("status"),"RECEIVED"); wh=waiting_hours(j.get("updatedAt"))
-                if status=="CLOSED":
-                    if is_today(j.get("updatedAt")): completed_today+=1
-                    continue
+                status=text(j.get("status"),"RECEIVED").upper(); completed=status in {"CLOSED","DISPATCHED"}; wh=0 if completed else waiting_hours(j.get("updatedAt"))
+                if completed and is_today(j.get("updatedAt")): completed_today+=1
                 sign=j.get("signoff") or {}; dispatch=j.get("dispatch") or {}; payment=j.get("payment") or {}
                 staff=[text(x) for x in [sign.get("receivedBy"),sign.get("inspectedBy"),sign.get("estimateConfirmedBy"),sign.get("repairedBy"),dispatch.get("testedBy"),payment.get("receivedBy")] if text(x)]
-                latest=staff[-1] if staff else ""; attention=wh>=48 or (status in {"ESTIMATE_PENDING","APPROVAL_PENDING"} and wh>=24)
-                priority="High" if attention else ("Normal" if wh>=12 else "Low")
+                latest=staff[-1] if staff else ""
+                attention=False if completed else (wh>=48 or (status in {"ESTIMATE_PENDING","APPROVAL_PENDING"} and wh>=24))
+                priority="Low" if completed else ("High" if attention else ("Normal" if wh>=12 else "Low"))
                 customer=j.get("customer") or {}; products=j.get("products") or []
-                sitems.append({"id":j.get("id"),"source":"servicing","record_no":text(j.get("jobNo"),"Service Job"),"customer":text(customer.get("name"),"├óΓé¼ΓÇ¥"),"product":text(products[0].get("productName") if products else "","├óΓé¼ΓÇ¥"),"branch":text(j.get("branchName"),"├óΓé¼ΓÇ¥"),"current_stage":SERVICE_STAGE_MAP.get(status,status.replace("_"," ").title()),"status":status,"progress":SERVICE_PROGRESS_MAP.get(status,20),"responsible_team":SERVICE_STAGE_MAP.get(status,status.replace("_"," ").title()),"assigned_to":latest,"priority":priority,"updated_at":text(j.get("updatedAt")),"waiting_hours":wh,"needs_attention":attention,"action_path":f"/process/servicing/{j.get('id')}"})
+                sitems.append({"id":j.get("id"),"source":"servicing","record_no":text(j.get("jobNo"),"Service Job"),"customer":text(customer.get("name"),"—"),"product":text(products[0].get("productName") if products else "","—"),"branch":text(j.get("branchName"),"—"),"current_stage":"Completed" if completed else SERVICE_STAGE_MAP.get(status,status.replace("_"," ").title()),"status":status,"progress":100 if completed else SERVICE_PROGRESS_MAP.get(status,20),"responsible_team":"Completed" if completed else SERVICE_STAGE_MAP.get(status,status.replace("_"," ").title()),"assigned_to":latest,"priority":priority,"updated_at":text(j.get("updatedAt")),"waiting_hours":wh,"needs_attention":attention,"completed":completed,"action_path":f"/process/servicing/{j.get('id')}"})
         except Exception: pass
     all_items=pitems+sitems
-    return {"generated_at":datetime.now().isoformat(timespec="seconds"),"purchasing":pitems,"servicing":sitems,"summary":{"active":len(all_items),"waiting":sum(1 for x in all_items if x["waiting_hours"]>=12),"needs_attention":sum(1 for x in all_items if x["needs_attention"]),"completed_today":completed_today}}
-
+    active_items=[x for x in all_items if not bool(x.get("completed"))]
+    return {"generated_at":datetime.now().isoformat(timespec="seconds"),"purchasing":pitems,"servicing":sitems,"summary":{"active":len(active_items),"waiting":sum(1 for x in active_items if x["waiting_hours"]>=12),"needs_attention":sum(1 for x in active_items if x["needs_attention"]),"completed_today":completed_today}}
 
 def tasks_payload() -> dict:
     return _cached_payload("tasks", 0.8, _build_tasks_payload)
@@ -1243,6 +1240,54 @@ def _delete_servicing_record(job_id: str) -> tuple[bool, str, str]:
         return False, text(payload.get("error"), "Servicing delete failed."), str(backup_dir)
     return True, text(job.get("jobNo"), "Service Job"), str(backup_dir)
 
+
+# NUNES_V2_8_3_SERVICE_COMPLETE
+def _completed_records_root() -> Path:
+    local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+    if local_app_data:
+        return Path(local_app_data) / "NUNES Operations" / "CompletedRecordsBackups"
+    return ROOT_DIR / "backups" / "CompletedRecordsBackups"
+
+def _new_complete_backup_dir(job_id: str) -> Path:
+    safe_id = "".join(ch if ch.isalnum() or ch in "-_." else "_" for ch in str(job_id))[:80] or "job"
+    folder = _completed_records_root() / f"servicing_{safe_id}_{datetime.now().strftime('%Y%m%d-%H%M%S-%f')}"
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+def _service_complete_request(job_id: str):
+    url = f"http://127.0.0.1:5055/api/jobs/{quote(str(job_id), safe='')}"
+    body = json.dumps({"status": "CLOSED"}).encode("utf-8")
+    req = urllib.request.Request(url, data=body, method="PUT", headers={"Content-Type": "application/json", "User-Agent": "NUNES-Company-Complete/2.8.3"})
+    with urllib.request.urlopen(req, timeout=6) as resp:
+        raw = resp.read().decode("utf-8", "ignore")
+        return resp.status, json.loads(raw or "{}")
+
+def _complete_servicing_record(job_id: str) -> tuple[bool, str, str]:
+    jobs_path = _service_jobs_path()
+    jobs = _service_jobs()
+    job = next((j for j in jobs if str(j.get("id")) == str(job_id)), None)
+    if job is None:
+        return False, "Servicing form not found.", ""
+    if text(job.get("status")).upper() in {"CLOSED", "DISPATCHED"}:
+        return True, text(job.get("jobNo"), "Service Job"), ""
+    backup_dir = _new_complete_backup_dir(str(job_id))
+    if jobs_path.exists():
+        shutil.copy2(jobs_path, backup_dir / "jobs-before-complete.json")
+    (backup_dir / "record-before-complete.json").write_text(json.dumps(job, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        status, payload = _service_complete_request(str(job_id))
+    except Exception:
+        try:
+            start_module("service_operations")
+            time.sleep(0.7)
+            status, payload = _service_complete_request(str(job_id))
+        except Exception as exc:
+            return False, f"Servicing completion service is unavailable: {exc}", str(backup_dir)
+    saved = payload.get("job") or {}
+    if not (200 <= int(status) < 300 and text(saved.get("status")).upper() == "CLOSED"):
+        return False, text(payload.get("error"), "Servicing form could not be marked completed."), str(backup_dir)
+    return True, text(saved.get("jobNo"), text(job.get("jobNo"), "Service Job")), str(backup_dir)
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(STATIC_DIR), **kwargs)
@@ -1358,6 +1403,17 @@ class Handler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path.startswith("/api/") and not self._api_authorized():
             return self._json({"error": "Unauthorized company data request"}, 401)
+        if parsed.path.startswith("/api/records/servicing/") and parsed.path.endswith("/complete"):
+            raw_id = unquote(parsed.path[len("/api/records/servicing/"):-len("/complete")].strip("/"))
+            if not raw_id:
+                return self._json({"error": "Servicing record id is required."}, 400)
+            try:
+                ok, label, backup = _complete_servicing_record(raw_id)
+            except Exception as exc:
+                return self._json({"error": str(exc)}, 500)
+            if not ok:
+                return self._json({"error": label, "backup": backup or None}, 404 if "not found" in label.lower() else 503)
+            return self._json({"ok": True, "completed": True, "id": raw_id, "label": label, "backup": backup or None})
         if parsed.path.startswith("/api/modules/") and parsed.path.endswith("/start"):
             key = parsed.path.split("/")[3]; ok, message = start_module(key)
             return self._json({"ok": ok, "message": message, "module": key}, 200 if ok else 400)

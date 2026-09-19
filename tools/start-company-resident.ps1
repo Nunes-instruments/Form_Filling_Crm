@@ -100,6 +100,49 @@ function Warm-Dashboard {
   } catch {}
 }
 
+# NUNES_V2_8_2_SERVICING_ALWAYS_HOT
+function Start-ServicingResidentFast {
+  try {
+    $launcher = Join-Path $stateRoot 'ServicingResident\start-servicing-resident.ps1'
+    if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) { return }
+    $ps = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    if (-not (Test-Path -LiteralPath $ps -PathType Leaf)) { $ps = 'powershell.exe' }
+    $psi = New-Object Diagnostics.ProcessStartInfo
+    $psi.FileName = $ps
+    $psi.Arguments = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $launcher + '" -Port 5055'
+    $psi.WorkingDirectory = Split-Path -Parent $launcher
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+    $psi.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+    [void][Diagnostics.Process]::Start($psi)
+  } catch {}
+}
+
+# Start Servicing BEFORE the dashboard fast-ready shortcut can exit.
+# This is non-blocking: Dashboard startup speed is not delayed.
+Start-ServicingResidentFast
+
+# NUNES_V2_8_3_ALWAYS_HOT_SILENT
+function Start-ServicingResidentFast {
+  try {
+    $launcher = Join-Path $stateRoot 'ServicingResident\start-servicing-resident.ps1'
+    if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) { return }
+    $ps = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    if (-not (Test-Path -LiteralPath $ps -PathType Leaf)) { $ps = 'powershell.exe' }
+    $psi = New-Object Diagnostics.ProcessStartInfo
+    $psi.FileName = $ps
+    $psi.Arguments = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $launcher + '" -Port 5055'
+    $psi.WorkingDirectory = Split-Path -Parent $launcher
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+    $psi.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+    [void][Diagnostics.Process]::Start($psi)
+  } catch {}
+}
+
+# Fire Servicing before the company fast-ready shortcut. Non-blocking and windowless.
+Start-ServicingResidentFast
+
 $platformUrl="http://127.0.0.1:$dashboardPort/api/health"
 $apiUrl="http://127.0.0.1:$apiPort/api/health"
 if((Test-JsonHealth $platformUrl 'platform' 110) -and (Test-JsonHealth $apiUrl 'api' 110)){
