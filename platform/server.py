@@ -242,25 +242,38 @@ def module_probe(key: str, timeout: float = 0.22) -> tuple[str, dict]:
             expected = _module_instance_id(mod)
             actual = text(payload.get("instance_id"))
             if key == "service_operations":
-                # V6.5.9 ULTRA-FAST readiness: compare the source signature when the
-                # resident exposes it. This avoids the old brittle VERSION.txt text
-                # comparison which could mark a healthy ServiceFlow as permanently stale
-                # (and made the Forms card sit on "Preparing in background").
+                # NUNES V2.8.5 READY-STATE FIX:
+                # The resident runtime is built from the ACTUAL source hash, while
+                # SOURCE_SIGNATURE.txt may intentionally lag until a release marker is
+                # regenerated. Trust the prepared resident config first.
                 recognized = text(payload.get("app")) == "ServiceFlowJobCards" and bool(payload.get("ok"))
                 if not recognized:
                     return "foreign", payload
-                expected_sig = ""
-                try:
-                    expected_sig = (ROOT_DIR / mod["app_dir"] / "SOURCE_SIGNATURE.txt").read_text(encoding="utf-8").strip()
-                except Exception:
-                    pass
                 actual_sig = text(payload.get("source_signature"))
-                if expected_sig and actual_sig:
-                    return ("ready" if hmac.compare_digest(actual_sig, expected_sig) else "stale"), payload
-                # Legacy resident fallback. A recognized ServiceFlow without a signature
-                # is allowed to stay usable; the normal server update path explicitly
-                # rebuilds/restarts Servicing when source changes. This keeps clicks fast
-                # even while upgrading older resident installations.
+                if actual_sig:
+                    resident_sig = ""
+                    try:
+                        local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+                        if local_app_data:
+                            cfg = Path(local_app_data) / "NUNES Operations" / "ServicingResident" / "servicing-resident.json"
+                            if cfg.exists():
+                                resident_sig = text(json.loads(cfg.read_text(encoding="utf-8-sig")).get("sourceSignature"))
+                    except Exception:
+                        resident_sig = ""
+                    if resident_sig and hmac.compare_digest(actual_sig, resident_sig):
+                        return "ready", payload
+
+                    declared_sig = ""
+                    try:
+                        declared_sig = (ROOT_DIR / mod["app_dir"] / "SOURCE_SIGNATURE.txt").read_text(encoding="utf-8").strip()
+                    except Exception:
+                        pass
+                    if declared_sig and hmac.compare_digest(actual_sig, declared_sig):
+                        return "ready", payload
+
+                    if resident_sig or declared_sig:
+                        return "stale", payload
+
                 return "ready", payload
             else:
                 recognized = bool(payload.get("ok")) and ("time" in payload or text(payload.get("app")) == "NunesPurchasingForms" or bool(actual))
@@ -291,18 +304,28 @@ def module_health(key: str, timeout: float = 0.22) -> bool:
 def _external_starting(key: str) -> bool:
     if key != "service_operations":
         return False
+    candidates = []
     try:
-        lock = ROOT_DIR / MODULES[key]["app_dir"] / "data" / "startup.lock"
-        if not lock.exists():
-            return False
-        age = time.time() - lock.stat().st_mtime
-        if age < 180:
-            return True
-        lock.unlink(missing_ok=True)
+        local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+        if local_app_data:
+            candidates.append(Path(local_app_data) / "NUNES Operations" / "ServicingResident" / "starting.lock")
     except Exception:
         pass
+    try:
+        candidates.append(ROOT_DIR / MODULES[key]["app_dir"] / "data" / "startup.lock")
+    except Exception:
+        pass
+    for lock in candidates:
+        try:
+            if not lock.exists():
+                continue
+            age = time.time() - lock.stat().st_mtime
+            if age < 30:
+                return True
+            lock.unlink(missing_ok=True)
+        except Exception:
+            pass
     return False
-
 
 def module_public_url(key: str, mod: dict) -> str:
     env_key = mod.get("public_url_env")
@@ -383,23 +406,33 @@ def start_module(key: str) -> tuple[bool, str]:
                 return True, "Starting"
             _starting[key] = time.time()
             mod = MODULES[key]
-            # SPEED-ONLY: always start Servicing through the owner-PC local-runtime wrapper.
-            # This keeps Next.js/node_modules/.next off a NAS/UNC workspace without changing
-            # the Servicing UI, API contract, port, data model or workflow.
-            start_file = ROOT_DIR / "tools" / "EARLY_START_SERVICING.bat"
-            app_dir = ROOT_DIR
-            if not start_file.exists():
-                return False, f"Startup file is missing: {start_file.name}"
             env = os.environ.copy()
             env["NUNES_INSTANCE_ID"] = _module_instance_id(mod)
             env["NUNES_EMBEDDED"] = "1"
             env["PORT"] = str(mod["port"])
             try:
-                subprocess.Popen(
-                    ["cmd.exe", "/d", "/c", str(start_file)],
-                    cwd=str(app_dir), env=env,
-                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                )
+                # NUNES V2.8.5 FAST-OPEN FIX:
+                local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+                resident = Path(local_app_data) / "NUNES Operations" / "ServicingResident" / "start-servicing-resident.ps1" if local_app_data else None
+                if resident and resident.exists():
+                    system_root = os.environ.get("SystemRoot", r"C:\Windows")
+                    powershell = Path(system_root) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+                    ps_exe = str(powershell if powershell.exists() else "powershell.exe")
+                    subprocess.Popen(
+                        [ps_exe, "-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass",
+                         "-File", str(resident), "-Port", str(mod["port"])],
+                        cwd=str(resident.parent), env=env,
+                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                    )
+                else:
+                    start_file = ROOT_DIR / "tools" / "EARLY_START_SERVICING.bat"
+                    if not start_file.exists():
+                        return False, f"Startup file is missing: {start_file.name}"
+                    subprocess.Popen(
+                        ["cmd.exe", "/d", "/c", str(start_file)],
+                        cwd=str(ROOT_DIR), env=env,
+                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                    )
                 return True, "Starting"
             except Exception as exc:
                 return False, f"Could not start: {exc}"
