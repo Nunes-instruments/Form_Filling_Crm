@@ -1,4 +1,4 @@
-param(
+﻿param(
   [Parameter(Mandatory=$true)][string]$Root
 )
 $ErrorActionPreference = 'Stop'
@@ -210,11 +210,35 @@ if ($needRuntime) {
       $p.Refresh()
     }
     $p.WaitForExit()
+    $p.Refresh()
     try { Get-Content -LiteralPath $stdout | Select-Object -Skip $printed | ForEach-Object { Write-Host $_ } } catch { }
-    if ($p.ExitCode -ne 0) { Get-Content -LiteralPath $stderr -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_ -ForegroundColor Red } }
 
-    if ($p.ExitCode -ne 0) { throw "One-time Servicing runtime preparation failed (exit $($p.ExitCode))." }
-  } finally {
+    # NUNES_V2_8_6_3_BUILD_EXIT_GUARD
+    # Windows PowerShell can expose a blank ExitCode after a redirected child has
+    # actually completed. Accept it only when the full production artifact set proves success.
+    $rawBuildExit = $null
+    try { $rawBuildExit = $p.ExitCode } catch { $rawBuildExit = $null }
+    $buildArtifactsReady =
+      (Test-SafeFile (Join-Path $runtimeApp 'node_modules\next\package.json')) -and
+      (Test-SafeFile (Join-Path $runtimeApp '.next\BUILD_ID')) -and
+      (Test-SafeFile (Join-Path $runtimeApp '.next\routes-manifest.json')) -and
+      (Test-SafeFile (Join-Path $runtimeApp '.next\prerender-manifest.json')) -and
+      (Test-SafeFile (Join-Path $runtimeApp '.next\standalone\server.js'))
+    $exitKnown = ($null -ne $rawBuildExit) -and (-not [string]::IsNullOrWhiteSpace([string]$rawBuildExit))
+    if (-not $exitKnown) {
+      if ($buildArtifactsReady) {
+        Write-Host '[Servicing] Build exit code unavailable, but all required production artifacts are complete. Reusing this prepared runtime.' -ForegroundColor Yellow
+        $buildExit = 0
+      } else {
+        try { Get-Content -LiteralPath $stderr -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_ -ForegroundColor Red } } catch { }
+        throw 'One-time Servicing runtime preparation ended without an exit code and required build artifacts are missing.'
+      }
+    } else { $buildExit = [int]$rawBuildExit }
+    if ($buildExit -ne 0) {
+      try { Get-Content -LiteralPath $stderr -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_ -ForegroundColor Red } } catch { }
+      throw "One-time Servicing runtime preparation failed (exit $buildExit)."
+    }
+    if (-not $buildArtifactsReady) { throw 'Servicing build process returned success but required production artifacts are incomplete.' }  } finally {
     $env:NUNES_EMBEDDED = $oldEmbedded; $env:PORT = $oldPort; $env:NUNES_PREPARE_ONLY = $oldPrep; $env:PATH = $oldPath
   }
 }
@@ -270,3 +294,4 @@ try {
 & powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File (Join-Path $residentDir 'start-servicing-resident.ps1') -Port 5055
 if ($LASTEXITCODE -ne 0) { throw 'Servicing resident launcher could not start the prepared runtime.' }
 exit 0
+

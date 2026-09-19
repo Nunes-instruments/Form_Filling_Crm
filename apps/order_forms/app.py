@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os, json, sqlite3, socket, tempfile, sys, subprocess, hashlib
+import urllib.request, urllib.error
 from pathlib import Path
 from datetime import datetime
 from functools import wraps
@@ -1505,6 +1506,81 @@ def report_order_detail(oid):
     supplier_balance=bill_amount-sp_total
     return render_template("report_order_detail.html",b=b,cp_total=cp_total,cp_balance=cp_balance,
                            bill_amount=bill_amount,sp_total=sp_total,supplier_balance=supplier_balance)
+
+# NUNES V2.8.6 PURCHASING CAMERA / GEMINI / PROOF
+PURCHASE_UPLOADS = DATA / "purchasing_uploads"
+PURCHASE_UPLOADS.mkdir(exist_ok=True)
+PURCHASE_ALLOWED_EXT = {".jpg",".jpeg",".png",".webp",".pdf"}
+
+def _purchase_order_exists(oid:int) -> bool:
+    with db() as c:
+        return c.execute("SELECT 1 FROM orders WHERE id=?",(oid,)).fetchone() is not None
+
+def _purchase_upload_dir(oid:int) -> Path:
+    p=PURCHASE_UPLOADS/str(int(oid))
+    p.mkdir(parents=True,exist_ok=True)
+    return p
+
+def _safe_purchase_filename(name:str) -> str:
+    raw=Path(str(name or "photo.jpg")).name
+    stem="".join(ch if ch.isalnum() or ch in "-_ ." else "_" for ch in Path(raw).stem).strip(" .")[:80] or "photo"
+    ext=Path(raw).suffix.lower()
+    if ext not in PURCHASE_ALLOWED_EXT: ext=".jpg"
+    return f"{datetime.now().strftime('%Y%m%d-%H%M%S-%f')}_{stem}{ext}"
+
+@app.post("/order/<int:oid>/gemini-scan")
+@login_required
+def purchase_gemini_scan(oid):
+    if not _purchase_order_exists(oid): return jsonify(error="Purchasing order not found."),404
+    body=request.get_json(silent=True) or {}
+    if not body.get("fileDataUrl"): return jsonify(error="Purchasing form image/PDF is missing."),400
+    req=urllib.request.Request("http://127.0.0.1:5055/api/forms/purchasing-gemini-parse",
+        data=json.dumps({"fileDataUrl":body.get("fileDataUrl"),"fileName":body.get("fileName","purchasing-form")}).encode("utf-8"),
+        method="POST",headers={"Content-Type":"application/json","User-Agent":"NUNES-Purchasing-Camera/2.8.6"})
+    try:
+        with urllib.request.urlopen(req,timeout=35) as resp:
+            payload=json.loads(resp.read().decode("utf-8","ignore") or "{}")
+            return jsonify(payload),resp.status
+    except urllib.error.HTTPError as exc:
+        raw=exc.read().decode("utf-8","ignore")
+        try: payload=json.loads(raw or "{}")
+        except Exception: payload={"error":raw or f"Gemini scan failed ({exc.code})."}
+        return jsonify(payload),exc.code
+    except Exception as exc:
+        return jsonify(error=f"Gemini purchasing scan service is unavailable: {exc}"),503
+
+@app.route("/order/<int:oid>/attachments",methods=["GET","POST"])
+@login_required
+def purchase_attachments(oid):
+    if not _purchase_order_exists(oid): return jsonify(error="Purchasing order not found."),404
+    folder=_purchase_upload_dir(oid)
+    if request.method=="GET":
+        files=[]
+        for p in sorted(folder.iterdir(),key=lambda x:x.stat().st_mtime if x.is_file() else 0,reverse=True):
+            if not p.is_file(): continue
+            files.append({"name":p.name,"url":url_for("purchase_attachment_file",oid=oid,name=p.name)})
+        return jsonify(files=files)
+    f=request.files.get("file")
+    if not f or not f.filename: return jsonify(error="Photo/file is missing."),400
+    ext=Path(f.filename).suffix.lower()
+    if ext not in PURCHASE_ALLOWED_EXT: return jsonify(error="Use JPG, PNG, WEBP or PDF."),400
+    # 15 MB hard safety limit without changing the global Flask request limit.
+    f.stream.seek(0,2); size=f.stream.tell(); f.stream.seek(0)
+    if size>15*1024*1024: return jsonify(error="File is larger than 15 MB."),413
+    name=_safe_purchase_filename(f.filename)
+    dest=folder/name
+    f.save(dest)
+    with db() as c: audit(c,oid,"attachment","uploaded",name)
+    return jsonify(ok=True,name=name,url=url_for("purchase_attachment_file",oid=oid,name=name))
+
+@app.get("/order/<int:oid>/attachment/<path:name>")
+@login_required
+def purchase_attachment_file(oid,name):
+    if not _purchase_order_exists(oid): return ("Not found",404)
+    safe=Path(name).name
+    p=_purchase_upload_dir(oid)/safe
+    if not p.exists() or not p.is_file(): return ("Not found",404)
+    return send_file(p)
 
 @app.route("/health")
 def health():
