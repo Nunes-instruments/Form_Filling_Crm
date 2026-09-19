@@ -13,6 +13,7 @@ import { blankJob, newProduct } from '@/lib/defaults';
 import type { DraftJob } from '@/components/HandwrittenFormImport';
 const PaperJobCardPreview = dynamic(() => import('@/components/PaperJobCardPreview'), { ssr:false });
 const HandwrittenFormImport = dynamic(() => import('@/components/HandwrittenFormImport'), { ssr:false });
+const CameraCaptureModal = dynamic(() => import('@/components/CameraCaptureModal'), { ssr:false });
 import type {
   AppSettings, EstimateStatus, ProductStatus, ProofCategory, RepairCategory,
   ServiceAttachment, ServiceJob, ServiceProduct
@@ -127,6 +128,9 @@ export default function JobEditor({ jobId, autoPreview = false }: { jobId?: stri
   const [proofCategory, setProofCategory] = useState<ProofCategory>('INSPECTION');
   const [previewOpen, setPreviewOpen] = useState(autoPreview);
   const [handwrittenImportOpen, setHandwrittenImportOpen] = useState(false);
+  const [handwrittenStartCamera, setHandwrittenStartCamera] = useState(false);
+  const [proofCameraOpen, setProofCameraOpen] = useState(false);
+  const [proofUploading, setProofUploading] = useState(false);
   const [returnToDashboardAfterPreview, setReturnToDashboardAfterPreview] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [lookupBusy, setLookupBusy] = useState<Record<string, boolean>>({});
@@ -705,6 +709,28 @@ export default function JobEditor({ jobId, autoPreview = false }: { jobId?: stri
     }
   }
 
+  async function addCapturedProof(file: File) {
+    setError('');
+    if (!job.id) {
+      setPendingFiles(files => [...files, file]);
+      setSavedMessage('Proof photo captured. It will upload automatically when you use Save & Preview.');
+      return;
+    }
+    setProofUploading(true);
+    try {
+      const form = new FormData();
+      form.append('files', file);
+      form.append('category', proofCategory);
+      const res = await fetch(`/api/jobs/${job.id}/attachments`, { method:'POST', body:form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Proof photo upload failed');
+      setJob(hydrateJob(data.job));
+      setSavedMessage(`Proof photo uploaded to ${label(proofCategory)}.`);
+    } finally {
+      setProofUploading(false);
+    }
+  }
+
   async function removeAttachment(a: ServiceAttachment) {
     if (!job.id || !confirm(`Remove proof file "${a.fileName}"?`)) return;
     const res = await fetch(`/api/jobs/${job.id}/attachments/${a.id}`, { method: 'DELETE' });
@@ -738,7 +764,10 @@ export default function JobEditor({ jobId, autoPreview = false }: { jobId?: stri
           <div><p className="eyebrow">SERVICE JOB CARD</p><h1>{job.jobNo || 'New Service Job'}</h1><p className="muted">Receive the instrument, auto-fetch the current market price, choose the repair margin and save the estimate.</p></div>
         </div>
         <div className="headerActions">
-          {!jobId && currentStep === 0 && <button className="button" type="button" onClick={() => setHandwrittenImportOpen(true)}><ScanText size={17}/> Upload Service Form</button>}
+          {!jobId && currentStep === 0 && <>
+            <button className="button primary" type="button" onClick={() => { setHandwrittenStartCamera(true); setHandwrittenImportOpen(true); }}><Camera size={17}/> Photo Scan</button>
+            <button className="button" type="button" onClick={() => { setHandwrittenStartCamera(false); setHandwrittenImportOpen(true); }}><ScanText size={17}/> Upload Service Form</button>
+          </>}
           <button className="button" type="button" onClick={() => setPreviewOpen(true)}><Eye size={17}/> Preview</button>
           {currentStep === 5 && <button className="button primary large" disabled={saving} onClick={() => void save()}><Save size={18}/>{saving ? 'Saving & Sending…' : 'Save & Preview'}</button>}
         </div>
@@ -842,9 +871,12 @@ export default function JobEditor({ jobId, autoPreview = false }: { jobId?: stri
         <div className="sectionHead"><div><span className="step">04</span><div><h2>Service Proof</h2><p>Attach photos and videos for receipt, inspection, before/after repair, approval or dispatch.</p></div></div></div>
         <div className="proofControls">
           <Field label="Proof Type"><select value={proofCategory} onChange={e => setProofCategory(e.target.value as ProofCategory)}>{proofCategories.map(c => <option key={c} value={c}>{label(c)}</option>)}</select></Field>
-          <div className="uploadDrop" onClick={() => fileInput.current?.click()}>
-            <Upload size={24}/><div><b>Add images / videos</b><span>Click to choose one or many files. Max 150 MB per file.</span></div>
-            <input ref={fileInput} hidden type="file" multiple accept="image/*,video/*,.pdf" onChange={e => setPendingFiles(Array.from(e.target.files || []))}/>
+          <div className="proofCaptureGroup">
+            <button className="button primary proofCameraButton" type="button" disabled={proofUploading} onClick={() => setProofCameraOpen(true)}><Camera size={21}/><span><b>{proofUploading ? 'Uploading Photo…' : 'Take Proof Photo'}</b><small>Phone / USB camera</small></span></button>
+            <div className="uploadDrop" onClick={() => fileInput.current?.click()}>
+              <Upload size={24}/><div><b>Add images / videos</b><span>Click to choose one or many files. Max 150 MB per file.</span></div>
+              <input ref={fileInput} hidden type="file" multiple accept="image/*,video/*,.pdf" onChange={e => setPendingFiles(Array.from(e.target.files || []))}/>
+            </div>
           </div>
         </div>
         {pendingFiles.length > 0 && <div className="pendingProof"><b>Ready to upload when you save:</b>{pendingFiles.map((f,i)=><span key={`${f.name}-${i}`}>{f.type.startsWith('video/')?<Film size={15}/>:<Camera size={15}/>} {f.name}<button onClick={()=>setPendingFiles(p=>p.filter((_,idx)=>idx!==i))}><X size={14}/></button></span>)}</div>}
@@ -913,11 +945,20 @@ export default function JobEditor({ jobId, autoPreview = false }: { jobId?: stri
           </>}
         </div>
       </div>
-      {handwrittenImportOpen && <HandwrittenFormImport open={true} onClose={() => setHandwrittenImportOpen(false)} onApplyDraft={(draft:DraftJob) => {
+      {handwrittenImportOpen && <HandwrittenFormImport open={true} startCamera={handwrittenStartCamera} onClose={() => { setHandwrittenImportOpen(false); setHandwrittenStartCamera(false); }} onApplyDraft={(draft:DraftJob) => {
         setJob(hydrateJob(draft));
         setCurrentStep(0);
         setSavedMessage('Scanned service form loaded. Review the details and continue.');
-      }}/>}
+      }}/>} 
+      <CameraCaptureModal
+        open={proofCameraOpen}
+        title="Take Service Proof Photo"
+        subtitle="Connect your phone by USB in Webcam mode, select it as the camera, take the proof photo, and it will be attached to this service job."
+        captureLabel={job.id ? 'Capture & Upload Proof' : 'Capture Proof Photo'}
+        filePrefix="service-proof"
+        onClose={() => setProofCameraOpen(false)}
+        onCapture={addCapturedProof}
+      />
       {previewOpen && <PaperJobCardPreview job={job} onClose={() => {
         setPreviewOpen(false);
         if (returnToDashboardAfterPreview) { router.replace('/'); router.refresh(); }
