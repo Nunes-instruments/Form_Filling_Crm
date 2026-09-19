@@ -109,6 +109,55 @@ def _file_stamp(path: Path) -> tuple:
     except Exception:
         return (0, 0)
 
+# NUNES_V2_8_8_0_LIVE_SERVICE_SOURCE
+_service_live_lock = threading.Lock()
+_service_live_cache: dict[str, object] = {"time": 0.0, "jobs": None, "stamp": None}
+
+def _service_live_jobs(timeout: float = 0.55):
+    now = time.monotonic()
+    with _service_live_lock:
+        cached = _service_live_cache.get("jobs")
+        cached_at = float(_service_live_cache.get("time") or 0.0)
+        if isinstance(cached, list) and now - cached_at <= 0.55:
+            return list(cached)
+    try:
+        req = urllib.request.Request(
+            "http://127.0.0.1:5055/api/jobs",
+            headers={"User-Agent": "NUNES-Company-LiveService/2.8.8.0", "Cache-Control": "no-cache"},
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if not (200 <= resp.status < 300):
+                return None
+            payload = json.loads(resp.read().decode("utf-8", "ignore") or "{}")
+        jobs = payload.get("jobs") if isinstance(payload, dict) else None
+        if not isinstance(jobs, list):
+            return None
+        signature_rows = [
+            (str(j.get("id") or ""), str(j.get("updatedAt") or ""), str(j.get("jobDate") or ""), str(j.get("status") or ""))
+            for j in jobs if isinstance(j, dict)
+        ]
+        signature = hashlib.sha1(
+            json.dumps(signature_rows, ensure_ascii=False, separators=(",", ":")).encode("utf-8", "ignore")
+        ).hexdigest()[:20]
+        stamp = ("live", len(jobs), signature)
+        with _service_live_lock:
+            _service_live_cache["time"] = time.monotonic()
+            _service_live_cache["jobs"] = list(jobs)
+            _service_live_cache["stamp"] = stamp
+        return list(jobs)
+    except Exception:
+        return None
+
+def _service_live_stamp():
+    jobs = _service_live_jobs(0.40)
+    if jobs is not None:
+        with _service_live_lock:
+            stamp = _service_live_cache.get("stamp")
+        if stamp:
+            return stamp
+        return ("live", len(jobs), "")
+    return ("file", _file_stamp(_service_jobs_path()))
+
 # V6.6.12 LIVE SERVICING DATA PATH
 # The Servicing resident writes staff/owner job cards to one persistent Windows-local
 # ServiceData folder. The management dashboard must read that same file, not the
@@ -116,8 +165,7 @@ def _file_stamp(path: Path) -> tuple:
 def _data_stamp() -> tuple:
     db = ROOT_DIR / "apps" / "order_forms" / "data" / "nunes_forms.db"
     wal = Path(str(db) + "-wal")
-    jobs = _service_jobs_path()
-    return (_file_stamp(db), _file_stamp(wal), _file_stamp(jobs))
+    return (_file_stamp(db), _file_stamp(wal), _service_live_stamp())
 
 def _cached_payload(name: str, ttl: float, builder):
     stamp = _data_stamp()
@@ -139,6 +187,9 @@ def _cached_payload(name: str, ttl: float, builder):
         return value
 
 def _service_jobs() -> list[dict]:
+    live = _service_live_jobs()
+    if live is not None:
+        return live
     path = _service_jobs_path()
     stamp = _file_stamp(path)
     with _jobs_lock:
@@ -869,7 +920,8 @@ def service_overview() -> dict:
         month_prefix = today.strftime("%Y-%m")
         service_created_dates = []
         for j in jobs:
-            d = parse_dt(j.get("createdAt")) or parse_dt(j.get("jobDate"))
+            # Historical/imported cards count by the real Service Job Date.
+            d = parse_dt(j.get("jobDate")) or parse_dt(j.get("createdAt"))
             service_created_dates.append(d.date() if d else None)
         today_forms = sum(1 for d in service_created_dates if d == today)
         this_month_forms = sum(1 for d in service_created_dates if d and d.strftime("%Y-%m") == month_prefix)

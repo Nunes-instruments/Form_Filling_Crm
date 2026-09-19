@@ -336,9 +336,91 @@ export function calculateTotals(job: Pick<ServiceJob, 'products' | 'totals'>) {
   };
 }
 
+// NUNES_V2_8_8_0_DUPLICATE_SAFE_LIST
+function dupNorm(value: unknown) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+function dupPaper(value: unknown) {
+  return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+function dupDigits(value: unknown) {
+  return String(value || '').replace(/\D/g, '');
+}
+function duplicateExactFingerprint(job: any) {
+  return JSON.stringify({
+    jobDate: String(job?.jobDate || '').slice(0,10),
+    branchName: dupNorm(job?.branchName),
+    officeType: dupNorm(job?.officeType),
+    customer: {
+      name: dupNorm(job?.customer?.name),
+      phone: dupDigits(job?.customer?.phone),
+      email: dupNorm(job?.customer?.email),
+      city: dupNorm(job?.customer?.city)
+    },
+    receipt: {
+      mrNo: dupNorm(job?.receipt?.mrNo),
+      mrDate: String(job?.receipt?.mrDate || '').slice(0,10),
+      reference: dupNorm(job?.receipt?.reference)
+    },
+    products: (job?.products || []).map((p:any)=>({
+      productName:dupNorm(p?.productName),
+      makeModel:dupNorm(p?.makeModel),
+      serialNo:dupPaper(p?.serialNo),
+      qty:Number(p?.qty || 0),
+      complaint:dupNorm(p?.complaint),
+      repairWork:dupNorm(p?.repairWork),
+      repairEstimate:Number(p?.repairEstimate || 0)
+    })),
+    totalEstimate:Number(job?.totals?.totalEstimate || 0),
+    notes:dupNorm(job?.notes)
+  });
+}
+function provenDuplicateKey(job: any) {
+  const date=String(job?.jobDate || '').slice(0,10);
+  const year=(date || String(job?.createdAt || '')).slice(0,4);
+  const customer=dupNorm(job?.customer?.name);
+  const paper=dupPaper(job?.legacySerialNo);
+  if (paper) return `paper:${year}:${paper}`;
+
+  const mrNo=dupPaper(job?.receipt?.mrNo);
+  if (customer && mrNo) return `mr:${year}:${customer}:${mrNo}`;
+
+  const reference=dupNorm(job?.receipt?.reference);
+  if (customer && date && reference) return `receipt:${customer}:${date}:${reference}`;
+
+  const serials=(job?.products || [])
+    .map((p:any)=>`${dupNorm(p?.productName)}:${dupPaper(p?.serialNo)}`)
+    .filter((v:string)=>!v.endsWith(':'))
+    .sort();
+  if (customer && date && serials.length) return `instrument:${customer}:${date}:${serials.join('|')}`;
+
+  const phone=dupDigits(job?.customer?.phone);
+  const email=dupNorm(job?.customer?.email);
+  if (customer && date && (phone.length >= 6 || email || mrNo || reference)) {
+    return `exact:${duplicateExactFingerprint(job)}`;
+  }
+  return '';
+}
+function duplicateSafeJobs(jobs: any[]) {
+  const sorted=[...(jobs || [])].sort((a:any,b:any)=>String(b?.updatedAt || '').localeCompare(String(a?.updatedAt || '')));
+  const seenIds=new Set<string>();
+  const seenKeys=new Set<string>();
+  const visible:any[]=[];
+  for (const job of sorted) {
+    const id=String(job?.id || '').trim();
+    if (id && seenIds.has(id)) continue;
+    if (id) seenIds.add(id);
+    const key=provenDuplicateKey(job);
+    if (key && seenKeys.has(key)) continue;
+    if (key) seenKeys.add(key);
+    visible.push(job);
+  }
+  return visible;
+}
+
 export async function listJobs() {
   const db = await readDb();
-  return db.jobs.slice().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return duplicateSafeJobs(db.jobs);
 }
 
 export async function getJob(id: string) {
