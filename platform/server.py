@@ -918,14 +918,32 @@ def service_overview() -> dict:
 
         today = date.today(); monthly = []
         month_prefix = today.strftime("%Y-%m")
-        service_created_dates = []
+        # NUNES_V2_8_10_0_TODAY_FILL_DATE
+        # "Today" and the daily Form Filling chart mean forms entered today.
+        # Month/year remain based on the real Service Job Date so imported old jobs
+        # stay in their historical year instead of being moved into the import year.
+        def service_fill_date(job):
+            raw = text(job.get("createdAt"))
+            if raw:
+                try:
+                    filled = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                    if filled.tzinfo is not None:
+                        filled = filled.astimezone()
+                    return filled.date()
+                except Exception:
+                    pass
+            fallback = parse_dt(job.get("jobDate"))
+            return fallback.date() if fallback else None
+
+        service_fill_dates = []
+        service_job_dates = []
         for j in jobs:
-            # Historical/imported cards count by the real Service Job Date.
-            d = parse_dt(j.get("jobDate")) or parse_dt(j.get("createdAt"))
-            service_created_dates.append(d.date() if d else None)
-        today_forms = sum(1 for d in service_created_dates if d == today)
-        this_month_forms = sum(1 for d in service_created_dates if d and d.strftime("%Y-%m") == month_prefix)
-        this_year_forms = sum(1 for d in service_created_dates if d and d.year == today.year)
+            service_fill_dates.append(service_fill_date(j))
+            job_date = parse_dt(j.get("jobDate")) or parse_dt(j.get("createdAt"))
+            service_job_dates.append(job_date.date() if job_date else None)
+        today_forms = sum(1 for d in service_fill_dates if d == today)
+        this_month_forms = sum(1 for d in service_job_dates if d and d.strftime("%Y-%m") == month_prefix)
+        this_year_forms = sum(1 for d in service_job_dates if d and d.year == today.year)
         for offset in range(5, -1, -1):
             y, m = today.year, today.month - offset
             while m <= 0: m += 12; y -= 1
@@ -938,7 +956,7 @@ def service_overview() -> dict:
         daily = []
         for offset in range(13, -1, -1):
             d = today - timedelta(days=offset)
-            count = sum(1 for x in service_created_dates if x == d)
+            count = sum(1 for x in service_fill_dates if x == d)
             daily.append({"key": d.isoformat(), "label": d.strftime("%d %b"), "forms": count})
         branches = [{"name": k, "jobs": v["jobs"], "open": v["open"], "estimate": money(v["estimate"])} for k, v in branches_map.items()]
         branches.sort(key=lambda x: (-x["jobs"], x["name"]))

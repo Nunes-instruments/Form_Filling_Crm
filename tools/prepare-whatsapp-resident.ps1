@@ -10,7 +10,11 @@ if(-not (Test-Path -LiteralPath $sourcePackage -PathType Leaf)){throw 'WhatsApp 
 
 $stateRoot=Join-Path $env:LOCALAPPDATA 'NUNES Operations'
 $residentDir=Join-Path $stateRoot 'WhatsAppResident'
-$workDir=Join-Path $residentDir 'app'
+# NUNES_V2_8_9_8_NO_SPACE_WHATSAPP_APP
+# Keep the executable JS/app path out of "NUNES Operations" so Node can never
+# lose part of the sidecar path at a Windows command-line space.
+$noSpaceAppRoot=Join-Path $env:LOCALAPPDATA 'NUNES_WhatsApp_Runtime'
+$workDir=Join-Path $noSpaceAppRoot 'app'
 $scriptsDir=Join-Path $workDir 'scripts'
 $assetsDir=Join-Path $workDir 'assets'
 $runtimeDir=Join-Path $residentDir 'runtime-link'
@@ -68,6 +72,7 @@ if(Test-Path -LiteralPath $sourceAssets -PathType Container){
   if($LASTEXITCODE -ge 8){throw 'Could not copy WhatsApp branding assets to the local resident.'}
 }
 Copy-Item -LiteralPath (Join-Path $Root 'tools\start-whatsapp-resident.ps1') -Destination (Join-Path $residentDir 'start-whatsapp-resident.ps1') -Force
+# NUNES_V2_8_10_0_WHATSAPP_CLEAN_RUNTIME
 $config=[ordered]@{
   nodeExe=$nodeExe
   nodeModules=(Join-Path $runtimeDir 'node_modules')
@@ -77,7 +82,7 @@ $config=[ordered]@{
   port=5056
   engine='WhatsAppWebLink'
   packageVersion=$wanted
-  sidecarVersion='3.4.0'
+  sidecarVersion='3.4.1'
   preparedAt=[DateTime]::UtcNow.ToString('o')
 }
 $config|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $residentDir 'whatsapp-resident.json') -Encoding UTF8

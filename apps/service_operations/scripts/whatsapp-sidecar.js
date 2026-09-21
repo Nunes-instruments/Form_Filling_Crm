@@ -11,7 +11,8 @@ const fsp = require('fs/promises');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const VERSION = '3.4.0';
+const VERSION = '3.4.1';
+// NUNES_V2_8_10_0_WHATSAPP_CLEAN_RUNTIME
 const ENGINE = 'WhatsAppWebLink';
 const PORT = Number(process.env.WHATSAPP_SIDECAR_PORT || 5056);
 const LOCALAPPDATA = process.env.LOCALAPPDATA || path.join(process.cwd(), 'data');
@@ -37,6 +38,9 @@ let manualShutdown = false;
 let generation = 0;
 let visibleClientStarting = false;
 let transportReady = false; // NUNES_V6610_AUTH_FAST_COMPLETE_FILE
+let linkedStateProbeBusy = false;
+let linkedStateProbeFailures = 0;
+let linkedStateProbeFirstFailureAt = 0;
 
 function mark(next, error = '') {
   state = next;
@@ -63,6 +67,17 @@ function findBrowserExecutable() {
 
 function hasLinkedSession() {
   try { return fs.existsSync(LINKED_MARKER); } catch (_) { return false; }
+}
+
+function savedLinkedInfo() {
+  try {
+    if (!fs.existsSync(LINKED_MARKER)) return {};
+    return JSON.parse(fs.readFileSync(LINKED_MARKER, 'utf8') || '{}');
+  } catch (_) { return {}; }
+}
+
+function savedConnectedNumber() {
+  return String(savedLinkedInfo().connectedNumber || '').replace(/\D/g, '');
 }
 
 async function writeLinkedMarker() {
@@ -138,6 +153,70 @@ function scheduleHiddenRestart(delayMs = 1200) {
     restartTimer = null;
     void ensureClient(false, true);
   }, Math.max(500, delayMs));
+}
+
+async function verifyLinkedDeviceState() {
+  if (linkedStateProbeBusy || manualShutdown || !client || !hasLinkedSession()) return;
+  if (!['READY', 'AUTHENTICATED', 'STARTING'].includes(state)) return;
+  linkedStateProbeBusy = true;
+  try {
+    const result = await Promise.race([
+      client.getState(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('WhatsApp state probe timed out')), 1800))
+    ]);
+    const current = String(result || '').toUpperCase();
+
+    if (/UNPAIRED|UNPAIRED_IDLE|LOGOUT/.test(current)) {
+      linkedStateProbeFailures = 0;
+      linkedStateProbeFirstFailureAt = 0;
+      connectedNumber = '';
+      transportReady = false;
+      loginBrowserOpen = false;
+      await fsp.rm(LINKED_MARKER, { force: true }).catch(() => {});
+      loadingMessage = 'WhatsApp was removed from linked devices';
+      mark('LOGIN_REQUIRED', 'WhatsApp was unlinked from the main mobile. Connect WhatsApp once again.');
+      await destroyClientFast();
+      return;
+    }
+
+    if (current === 'CONNECTED') {
+      linkedStateProbeFailures = 0;
+      linkedStateProbeFirstFailureAt = 0;
+      const liveNumber = String(client?.info?.wid?.user || '').replace(/\D/g, '');
+      if (liveNumber) connectedNumber = liveNumber;
+      if (state !== 'READY' && transportReady) {
+        loadingMessage = 'WhatsApp connected';
+        mark('READY');
+      }
+      return;
+    }
+
+    linkedStateProbeFailures += 1;
+    if (!linkedStateProbeFirstFailureAt) linkedStateProbeFirstFailureAt = Date.now();
+    const failedFor = Date.now() - linkedStateProbeFirstFailureAt;
+    if (linkedStateProbeFailures >= 6 && failedFor >= 25000) {
+      transportReady = false;
+      loadingMessage = 'Restoring saved WhatsApp connection';
+      mark('STARTING', `Temporary WhatsApp state: ${current || 'unavailable'}`);
+      scheduleHiddenRestart(1800);
+      linkedStateProbeFailures = 0;
+      linkedStateProbeFirstFailureAt = Date.now();
+    }
+  } catch (_) {
+    linkedStateProbeFailures += 1;
+    if (!linkedStateProbeFirstFailureAt) linkedStateProbeFirstFailureAt = Date.now();
+    const failedFor = Date.now() - linkedStateProbeFirstFailureAt;
+    if (linkedStateProbeFailures >= 6 && failedFor >= 25000 && hasLinkedSession()) {
+      transportReady = false;
+      loadingMessage = 'Restoring saved WhatsApp connection';
+      mark('STARTING', 'WhatsApp browser transport was interrupted; restoring the saved session.');
+      scheduleHiddenRestart(1800);
+      linkedStateProbeFailures = 0;
+      linkedStateProbeFirstFailureAt = Date.now();
+    }
+  } finally {
+    linkedStateProbeBusy = false;
+  }
 }
 
 async function ensureClient(visibleLogin = false, force = false) {
@@ -360,7 +439,8 @@ function statusPayload() {
     sessionStartedAt,
     loadingPercent: state === 'READY' ? 100 : state === 'AUTHENTICATED' ? 80 : state === 'STARTING' ? 55 : state === 'LOGIN_BROWSER_OPEN' ? 35 : 0,
     loadingMessage,
-    connectedNumber,
+    connectedNumber: connectedNumber || savedConnectedNumber(),
+    linked: hasLinkedSession(),
     lastError,
     lastStateAt,
     sendReady: transportReady,
@@ -455,7 +535,8 @@ const server = http.createServer(async (req, res) => {
       });
     }
     if (req.method === 'GET' && url.pathname === '/status') {
-      // Status reads must never launch or restart a browser.
+      // Keep status reads fast, but validate the saved Linked Devices state in background.
+      void verifyLinkedDeviceState();
       return sendJson(res, 200, statusPayload());
     }
     if (req.method === 'POST' && url.pathname === '/prepare') {
@@ -501,12 +582,17 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`[ServiceFlow WhatsApp] ${ENGINE} runtime ${VERSION} listening on http://127.0.0.1:${PORT}`);
-  if (hasLinkedSession()) setImmediate(() => { void ensureClient(false); });
-  else {
+  if (hasLinkedSession()) {
+    connectedNumber = savedConnectedNumber();
+    setImmediate(() => { void ensureClient(false); });
+  } else {
     loadingMessage = 'Link WhatsApp Web once on the main-server PC';
     mark('LOGIN_REQUIRED');
   }
 });
+
+const linkedDeviceMonitor = setInterval(() => { void verifyLinkedDeviceState(); }, 5000);
+if (typeof linkedDeviceMonitor.unref === 'function') linkedDeviceMonitor.unref();
 
 process.on('uncaughtException', (error) => {
   mark('ERROR', error && error.stack ? error.stack : String(error));

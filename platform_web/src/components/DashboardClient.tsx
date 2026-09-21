@@ -65,15 +65,22 @@ function PeriodCard({ metric }: { metric: PeriodMetric }) {
   );
 }
 
+// NUNES_V2_8_10_0_TOTAL_VALUES
+function inr(value: number) {
+  return `INR ${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 function SourceSummary({
   type,
   total,
+  value,
   today,
   month,
   year,
 }: {
   type: "purchasing" | "servicing";
   total: number;
+  value: number;
   today: number;
   month: number;
   year: number;
@@ -92,8 +99,14 @@ function SourceSummary({
         </Link>
       </div>
       <div className="simple-source-total">
-        <span>Total forms</span>
-        <strong>{total}</strong>
+        <div>
+          <span>Total forms</span>
+          <strong style={{ display: "block", marginTop: 4 }}>{total}</strong>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <span>Total value of all forms</span>
+          <strong style={{ display: "block", marginTop: 7, fontSize: 22 }}>{inr(value)}</strong>
+        </div>
       </div>
       <div className="simple-source-periods">
         <div><span>Today</span><b>{today}</b></div>
@@ -282,6 +295,8 @@ export default function DashboardClient() {
   const s = overview.service || {};
   const purchaseTotal = Number(f.total_orders || 0);
   const serviceTotal = Number(s.total_jobs || 0);
+  const purchaseValue = Number(f.order_value || 0);
+  const serviceValue = Number(s.total_estimate || 0);
   const totalForms = purchaseTotal + serviceTotal;
   const purchaseToday = Number(f.today_forms || 0);
   const serviceToday = Number(s.today_forms || 0);
@@ -339,8 +354,8 @@ export default function DashboardClient() {
       </section>
 
       <section className="simple-source-grid">
-        <SourceSummary type="purchasing" total={purchaseTotal} today={purchaseToday} month={purchaseMonth} year={purchaseYear} />
-        <SourceSummary type="servicing" total={serviceTotal} today={serviceToday} month={serviceMonth} year={serviceYear} />
+        <SourceSummary type="purchasing" total={purchaseTotal} value={purchaseValue} today={purchaseToday} month={purchaseMonth} year={purchaseYear} />
+        <SourceSummary type="servicing" total={serviceTotal} value={serviceValue} today={serviceToday} month={serviceMonth} year={serviceYear} />
       </section>
 
       <section className="simple-chart-grid">

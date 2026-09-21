@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import fs from 'fs';
 import path from 'path';
 
 export type WhatsAppWebState = 'NOT_STARTED' | 'STARTING' | 'LOGIN_REQUIRED' | 'LOGIN_BROWSER_OPEN' | 'AUTHENTICATED' | 'READY' | 'DISCONNECTED' | 'ERROR';
@@ -14,6 +15,8 @@ type SidecarStatus = {
   loginUrl?: string;
   loginBrowserOpen?: boolean;
   connectedNumber?: string;
+  linked?: boolean;
+  sendReady?: boolean;
   lastError?: string;
   lastStateAt?: string;
   runtimeInstalling?: boolean;
@@ -21,6 +24,30 @@ type SidecarStatus = {
 
 const SIDECAR_URL = process.env.WHATSAPP_SIDECAR_URL || 'http://127.0.0.1:5056';
 let lastStartAttempt = 0;
+
+// NUNES_V2_8_9_0_PERSISTENT_WHATSAPP_SESSION
+// Reuse the main-server WhatsApp link across forms and resident restarts.
+const SAVED_LINK_MARKER = path.join(
+  process.env.LOCALAPPDATA || '',
+  'ServiceFlow',
+  'whatsapp-web-link',
+  'linked.json'
+);
+function hasSavedWhatsAppSession() {
+  try { return Boolean(process.env.LOCALAPPDATA) && fs.existsSync(SAVED_LINK_MARKER); }
+  catch { return false; }
+}
+async function waitForSidecar(maxMs = 5000) {
+  const deadline = Date.now() + Math.max(500, maxMs);
+  while (Date.now() < deadline) {
+    try {
+      const response = await sidecarFetch('/health', undefined, 280);
+      if (response.ok) return true;
+    } catch {}
+    await new Promise(resolve => setTimeout(resolve, 180));
+  }
+  return false;
+}
 
 async function sidecarFetch(pathname: string, init?: RequestInit, timeoutMs = 350) {
   const controller = new AbortController();
@@ -73,10 +100,11 @@ function unavailable(error: unknown): SidecarStatus {
 }
 
 function starting(): SidecarStatus {
+  const linked=hasSavedWhatsAppSession();
   return {
-    state: 'STARTING', ready: false, loginRequired: true, qrDataUrl: '', connectedNumber: '',
-    lastError: 'WhatsApp is reconnecting in the background. If this PC has not been linked yet, open WhatsApp Web Login once.',
-    lastStateAt: new Date().toISOString(), runtimeInstalling: true
+    state:'STARTING', ready:false, loginRequired:!linked, linked, qrDataUrl:'', connectedNumber:'',
+    lastError:linked ? 'Restoring the saved WhatsApp connection in the background.' : 'WhatsApp is starting. Link once if this PC has never been connected.',
+    lastStateAt:new Date().toISOString(), runtimeInstalling:true
   };
 }
 
@@ -89,7 +117,10 @@ export async function getWhatsAppWebStatus(initialize = true): Promise<SidecarSt
     if (!response.ok) throw new Error(`runtime HTTP ${response.status}`);
     return await response.json() as SidecarStatus;
   } catch (error) {
-    if (initialize) { startSidecarOnDemand(); return starting(); }
+    if (initialize || hasSavedWhatsAppSession()) {
+      startSidecarOnDemand();
+      return { ...starting(), loginRequired: false };
+    }
     return unavailable(error);
   }
 }
@@ -124,16 +155,31 @@ export async function prepareWhatsAppWeb(): Promise<SidecarStatus> {
 export async function sendWhatsAppWebMessage(phoneDigits: string, message: string, branded = false) {
   const digits = String(phoneDigits || '').replace(/\D/g, '');
   if (!digits) return { status: 'SKIPPED' as const, detail: 'Customer WhatsApp number missing' };
-  try {
+
+  const sendOnce = async () => {
     const response = await sidecarFetch('/send', {
       method: 'POST', body: JSON.stringify({ phoneDigits: digits, message, branded })
     }, 30000);
     const payload = await response.json().catch(() => ({} as any));
     if (!response.ok) throw new Error(payload?.detail || `runtime HTTP ${response.status}`);
     return payload;
-  } catch (error) {
-    startSidecarOnDemand();
-    return { status: 'LOGIN_REQUIRED' as const, detail: error instanceof Error ? error.message : 'WhatsApp runtime is starting' };
+  };
+
+  try {
+    return await sendOnce();
+  } catch (firstError) {
+    if (hasSavedWhatsAppSession()) {
+      startSidecarOnDemand();
+      if (await waitForSidecar(5000)) {
+        try { return await sendOnce(); }
+        catch (retryError) {
+          return { status:'LOGIN_REQUIRED' as const, detail: retryError instanceof Error ? retryError.message : 'Saved WhatsApp session could not be restored' };
+        }
+      }
+    } else {
+      startSidecarOnDemand();
+    }
+    return { status:'LOGIN_REQUIRED' as const, detail:firstError instanceof Error ? firstError.message : 'WhatsApp runtime is starting' };
   }
 }
 
